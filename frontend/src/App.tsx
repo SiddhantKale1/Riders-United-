@@ -24,6 +24,7 @@ import { audioEffects } from './services/audioEffects';
 import { convoySimulation } from './services/simulationEngine';
 import { geolocationService } from './services/geolocationService';
 import { routingService } from './services/routingService';
+import { nativeMobile } from './services/nativeMobile';
 
 export function App() {
   // Current user's profile
@@ -76,6 +77,7 @@ export function App() {
 
   // Initialize Socket.io and Load Initial Ride
   useEffect(() => {
+    nativeMobile.init();
     socketService.init();
 
     // Listen to initial full state from backend
@@ -514,14 +516,17 @@ export function App() {
         durationMinutes={activeRoute?.durationMinutes}
       />
 
-      {/* Tactical Alerts Bar & Big PTT Thumb Button (Bottom Center Dock) */}
-      <div className="absolute bottom-6 left-0 right-0 z-20 flex flex-col items-center justify-center px-3 space-y-2.5 pointer-events-none">
+      {/* Bottom Center: Tactical Alerts Quick Action Dock */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
         <TacticalAlertsBar
           alerts={alerts}
           onTriggerAlert={handleTriggerAlert}
           onDismissAlert={handleDismissAlert}
         />
+      </div>
 
+      {/* Right Wing (Handlebar Right Thumb Station): Big Push-To-Talk Button */}
+      <div className="absolute bottom-4 right-4 z-20 pointer-events-none flex flex-col items-end">
         <PushToTalk
           currentRiderId={profile.id}
           callsign={profile.callsign}

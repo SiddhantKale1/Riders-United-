@@ -1,13 +1,17 @@
 {
   "name": "riders-united",
   "version": "1.0.0",
-  "description": "Real-time group motorcycle convoy GPS tracking and PTT voice comms platform",
+  "description": "Real-time group motorcycle convoy GPS tracking and PTT voice comms platform for Android, iOS and Web in Landscape Cockpit mode",
   "scripts": {
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
-    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"cd backend && npm start\" \"cd frontend && npm run preview\""
+    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"cd backend && npm start\" \"cd frontend && npm run preview\"",
+    "cap:sync": "cd frontend && npm run build && npx cap sync",
+    "cap:open:android": "cd frontend && npx cap open android",
+    "cap:open:ios": "cd frontend && npx cap open ios",
+    "build:apk": "cd frontend && npm run build && npx cap sync && cd android && ./gradlew assembleDebug"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

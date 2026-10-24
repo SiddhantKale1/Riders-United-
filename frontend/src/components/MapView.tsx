@@ -350,8 +350,8 @@ export const MapView: React.FC<MapViewProps> = ({
     <div className="relative w-full h-full overflow-hidden bg-slate-950">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Floating Camera & Map Theme Controls (Top Left) */}
-      <div className="absolute top-20 left-4 z-20 flex flex-col space-y-2 pointer-events-auto">
+      {/* Bottom Left Dock: Camera Modes, Map Themes & Route Label */}
+      <div className="absolute bottom-4 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto max-w-[80vw]">
         {/* Camera Modes */}
         <div className="flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1">
           <button
@@ -394,7 +394,7 @@ export const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* Free Map Themes (Voyager / Dark / Satellite) */}
-        <div className="flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1 self-start">
+        <div className="flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1">
           <button
             onClick={() => setMapTheme('voyager')}
             className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1 transition-all ${
@@ -434,14 +434,14 @@ export const MapView: React.FC<MapViewProps> = ({
             <span>Sat</span>
           </button>
         </div>
-      </div>
 
-      {/* Highway Label (Bottom Left) */}
-      <div className="absolute bottom-4 left-4 z-20 hidden sm:flex items-center space-x-2 glass-pill rounded-xl px-3 py-1.5 text-xs font-mono text-slate-300">
-        <Compass className="w-3.5 h-3.5 text-cyan-400" />
-        <span className="text-amber-400 font-bold">NH 66</span>
-        <span className="text-white/20">|</span>
-        <span>Mumbai ➔ Goa Highway (550 km)</span>
+        {/* Route Label */}
+        <div className="hidden lg:flex items-center space-x-2 glass-pill rounded-xl px-3 py-1.5 text-xs font-mono text-slate-300">
+          <Compass className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-amber-400 font-bold">LIVE CONVOY</span>
+          <span className="text-white/20">|</span>
+          <span>Landscape Cockpit Mode</span>
+        </div>
       </div>
     </div>
   );

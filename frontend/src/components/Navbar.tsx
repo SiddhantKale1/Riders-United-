@@ -11,10 +11,12 @@ import {
   FastForward,
   Share2,
   Check,
-  PlusCircle
+  PlusCircle,
+  Maximize2
 } from 'lucide-react';
 import { RideChannel, TrackingMode } from '../types';
 import { RouteSearchBox } from './RouteSearchBox';
+import { nativeMobile } from '../services/nativeMobile';
 
 interface NavbarProps {
   ride: RideChannel | null;
@@ -168,6 +170,15 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Right Capsule: Handlebar controls & Discord channel launcher */}
       <div className="pointer-events-auto flex items-center space-x-2">
         <div className="glass-pill rounded-2xl p-1 flex items-center space-x-1">
+          {/* Landscape Fullscreen Lock */}
+          <button
+            onClick={() => nativeMobile.enterLandscapeFullscreen()}
+            className="p-2 rounded-xl text-amber-400 hover:text-amber-300 glass-button"
+            title="Lock Landscape Cockpit & Fullscreen (Motorcycle Mount)"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+
           {/* Screen Wake Lock */}
           <button
             onClick={onToggleWakeLock}

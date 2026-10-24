@@ -47,9 +47,9 @@ export const CockpitHUD: React.FC<CockpitHUDProps> = ({
   };
 
   return (
-    <div className="absolute top-20 right-4 z-20 flex flex-col items-end space-y-2 pointer-events-none select-none max-w-[270px] md:max-w-[310px]">
-      {/* BMW Motorrad / CarPlay Style Navigation & Speed Card */}
-      <div className="pointer-events-auto glass-panel rounded-3xl p-4 w-full shadow-2xl text-slate-100 flex flex-col">
+    <div className="absolute top-20 left-4 z-20 flex flex-col items-start space-y-2 pointer-events-none select-none max-w-[270px] md:max-w-[300px]">
+      {/* BMW Motorrad / CarPlay Style Navigation & Speed Card (Left Wing) */}
+      <div className="pointer-events-auto glass-panel rounded-3xl p-3.5 w-full shadow-2xl text-slate-100 flex flex-col">
         {/* Top telemetry bar */}
         <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono mb-2">
           <div className="flex items-center space-x-1.5">

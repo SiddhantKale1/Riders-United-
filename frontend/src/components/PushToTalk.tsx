@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, Radio, Volume2 } from 'lucide-react';
 import { voiceComms } from '../services/voiceComms';
+import { nativeMobile } from '../services/nativeMobile';
 
 interface PushToTalkProps {
   currentRiderId: string;
@@ -71,12 +72,14 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
   const startTalking = () => {
     if (isTransmittingRef.current) return;
     setIsTransmitting(true);
+    nativeMobile.triggerHaptic('heavy');
     voiceComms.startTransmission(currentRiderId, callsign, channel);
   };
 
   const stopTalking = () => {
     if (!isTransmittingRef.current) return;
     setIsTransmitting(false);
+    nativeMobile.triggerHaptic('light');
     voiceComms.stopTransmission(currentRiderId, callsign, channel);
   };
 

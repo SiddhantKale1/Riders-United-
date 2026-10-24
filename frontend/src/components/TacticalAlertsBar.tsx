@@ -9,6 +9,7 @@ import {
   X
 } from 'lucide-react';
 import { AlertType, TacticalAlert } from '../types';
+import { nativeMobile } from '../services/nativeMobile';
 
 interface TacticalAlertsBarProps {
   alerts: TacticalAlert[];
@@ -22,6 +23,11 @@ export const TacticalAlertsBar: React.FC<TacticalAlertsBarProps> = ({
   onDismissAlert
 }) => {
   const activeAlerts = alerts.filter(a => a.active);
+
+  const handleTrigger = (type: AlertType, title: string, detail: string) => {
+    nativeMobile.triggerEmergencyHaptic();
+    onTriggerAlert(type, title, detail);
+  };
 
   return (
     <div className="flex flex-col items-center space-y-2 pointer-events-none select-none">
@@ -62,7 +68,7 @@ export const TacticalAlertsBar: React.FC<TacticalAlertsBarProps> = ({
       {/* Floating 1-Tap Glass Pill Dock (CarPlay style) */}
       <div className="pointer-events-auto glass-pill rounded-2xl p-1.5 flex items-center space-x-1 sm:space-x-1.5 shadow-2xl">
         <button
-          onClick={() => onTriggerAlert('hazard', 'Road Hazard Ahead', 'Pothole / Debris on road')}
+          onClick={() => handleTrigger('hazard', 'Road Hazard Ahead', 'Pothole / Debris on road')}
           className="p-2 sm:px-3 sm:py-2 rounded-xl text-amber-400 hover:text-amber-300 glass-button flex items-center space-x-1.5 text-xs font-semibold"
           title="Report Road Hazard"
         >
@@ -71,7 +77,7 @@ export const TacticalAlertsBar: React.FC<TacticalAlertsBarProps> = ({
         </button>
 
         <button
-          onClick={() => onTriggerAlert('fuel', 'Fuel Stop Needed', 'Refuel pitstop requested')}
+          onClick={() => handleTrigger('fuel', 'Fuel Stop Needed', 'Refuel pitstop requested')}
           className="p-2 sm:px-3 sm:py-2 rounded-xl text-orange-400 hover:text-orange-300 glass-button flex items-center space-x-1.5 text-xs font-semibold"
           title="Request Fuel Stop"
         >
@@ -80,7 +86,7 @@ export const TacticalAlertsBar: React.FC<TacticalAlertsBarProps> = ({
         </button>
 
         <button
-          onClick={() => onTriggerAlert('police', 'Speed Trap / Police', 'Radar check ahead')}
+          onClick={() => handleTrigger('police', 'Speed Trap / Police', 'Radar check ahead')}
           className="p-2 sm:px-3 sm:py-2 rounded-xl text-cyan-400 hover:text-cyan-300 glass-button flex items-center space-x-1.5 text-xs font-semibold"
           title="Speed Trap Checkpoint"
         >
@@ -89,7 +95,7 @@ export const TacticalAlertsBar: React.FC<TacticalAlertsBarProps> = ({
         </button>
 
         <button
-          onClick={() => onTriggerAlert('breakdown', 'Mechanical Breakdown', 'Puncture or bike issue')}
+          onClick={() => handleTrigger('breakdown', 'Mechanical Breakdown', 'Puncture or bike issue')}
           className="p-2 sm:px-3 sm:py-2 rounded-xl text-purple-400 hover:text-purple-300 glass-button flex items-center space-x-1.5 text-xs font-semibold"
           title="Breakdown / Puncture"
         >
@@ -98,7 +104,7 @@ export const TacticalAlertsBar: React.FC<TacticalAlertsBarProps> = ({
         </button>
 
         <button
-          onClick={() => onTriggerAlert('regroup', 'Regroup Formation', 'Slow down to regroup pack')}
+          onClick={() => handleTrigger('regroup', 'Regroup Formation', 'Slow down to regroup pack')}
           className="p-2 sm:px-3 sm:py-2 rounded-xl text-emerald-400 hover:text-emerald-300 glass-button flex items-center space-x-1.5 text-xs font-semibold"
           title="Regroup Convoy"
         >
@@ -107,7 +113,7 @@ export const TacticalAlertsBar: React.FC<TacticalAlertsBarProps> = ({
         </button>
 
         <button
-          onClick={() => onTriggerAlert('sos', 'EMERGENCY SOS', 'Immediate stop required!')}
+          onClick={() => handleTrigger('sos', 'EMERGENCY SOS', 'Immediate stop required!')}
           className="p-2 sm:px-3 sm:py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-all flex items-center space-x-1.5 text-xs shadow-md shadow-red-600/30 animate-pulse"
           title="Emergency Stop SOS"
         >
