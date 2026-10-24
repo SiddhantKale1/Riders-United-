@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import { RideChannel, Rider, TacticalAlert, ChatMessage } from '../types';
 import { voiceComms } from './voiceComms';
 import { audioEffects } from './audioEffects';
+import { getApiBaseUrl } from './apiConfig';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -26,10 +27,8 @@ class SocketService {
   public init() {
     if (this.socket) return;
 
-    // In dev / production, connect to port 5001 or current host
-    const socketUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:5001'
-      : window.location.origin;
+    // Dynamic resolver: works on localhost, local Wi-Fi LAN, and Native iOS/Android
+    const socketUrl = getApiBaseUrl();
 
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],

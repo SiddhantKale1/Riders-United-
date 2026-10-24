@@ -27,6 +27,7 @@ import { convoySimulation } from './services/simulationEngine';
 import { geolocationService } from './services/geolocationService';
 import { routingService } from './services/routingService';
 import { nativeMobile } from './services/nativeMobile';
+import { getApiBaseUrl } from './services/apiConfig';
 
 export function App() {
   // Current user's profile
@@ -185,7 +186,7 @@ export function App() {
     socketService.joinRide('MUM-GOA', profile);
 
     // Fetch initial HTTP snapshot
-    fetch('http://localhost:5001/api/rides/MUM-GOA')
+    fetch(`${getApiBaseUrl()}/api/rides/MUM-GOA`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.code) {
@@ -482,7 +483,7 @@ export function App() {
   };
 
   const handleCreateRide = (rideData: any) => {
-    fetch('http://localhost:5001/api/rides', {
+    fetch(`${getApiBaseUrl()}/api/rides`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rideData)
