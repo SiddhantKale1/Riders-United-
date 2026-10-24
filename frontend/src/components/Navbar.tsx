@@ -38,6 +38,9 @@ interface NavbarProps {
   onRouteSelected: (start: { name: string; lat: number; lng: number }, dest: { name: string; lat: number; lng: number }) => void;
   currentGpsCoords?: { lat: number; lng: number } | null;
   activeRouteSummary?: string;
+  isRideActive: boolean;
+  onStartRide: () => void;
+  onEndRide: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -58,7 +61,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   unreadAlertsCount,
   onRouteSelected,
   currentGpsCoords,
-  activeRouteSummary
+  activeRouteSummary,
+  isRideActive,
+  onStartRide,
+  onEndRide
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -106,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Center Capsule: Google Maps Style "Where to?" Search & Mode Switcher */}
+      {/* Center Capsule: Google Maps Style Search, START RIDE Button & Mode Switcher */}
       <div className="pointer-events-auto flex items-center space-x-2">
         {/* Google Maps Search Bar (Search ANY location / preset worldwide) */}
         <RouteSearchBox
@@ -114,6 +120,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           currentGpsCoords={currentGpsCoords}
           activeRouteSummary={activeRouteSummary}
         />
+
+        {/* Start / End Ride Button */}
+        {!isRideActive ? (
+          <button
+            onClick={onStartRide}
+            className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center space-x-1.5 shadow-lg shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition-all"
+            title="Start Ride: Zooms to Starting Area and Activates Satellite Cockpit Mode"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Start Ride</span>
+          </button>
+        ) : (
+          <button
+            onClick={onEndRide}
+            className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 border border-red-400 text-white font-black text-xs uppercase tracking-wider flex items-center space-x-1.5 shadow-lg shadow-red-600/30 hover:brightness-110 active:scale-95 transition-all animate-pulse"
+            title="End Active Ride"
+          >
+            <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
+            <span>End Ride</span>
+          </button>
+        )}
 
         {/* Mode toggle */}
         <div className="hidden lg:flex items-center glass-pill rounded-2xl p-1 space-x-1">

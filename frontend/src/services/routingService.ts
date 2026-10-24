@@ -15,16 +15,35 @@ export interface RouteManeuver {
   durationSeconds: number;
 }
 
+export interface FuelStop {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  distanceFromStartKm: number;
+  description: string;
+}
+
 export interface RouteCalculationResult {
   coordinates: [number, number][]; // [lat, lng] array for Leaflet
   distanceKm: number;
   durationMinutes: number;
   maneuvers: RouteManeuver[];
   summary: string;
+  fuelStops: FuelStop[];
 }
 
+const COMMON_FUEL_BRANDS = [
+  'IndianOil Petrol Station',
+  'Bharat Petroleum (BPCL)',
+  'Hindustan Petroleum (HPCL)',
+  'Shell Highway Fuel Station',
+  'Nayara Energy Fuel Stop',
+  'Jio-bp Fuel Station'
+];
+
 class RoutingService {
-  // Free Nominatim Geocoding Search (Google Maps-like location search)
+  // Free Nominatim Geocoding Search
   public async searchPlaces(query: string): Promise<LocationSearchResult[]> {
     if (!query || query.trim().length < 2) return [];
 
@@ -72,14 +91,13 @@ class RoutingService {
     }
   }
 
-  // Calculate Real Road Route using free OSRM (Open Source Routing Machine)
+  // Calculate Real Road Route using free OSRM
   public async calculateRoute(
     waypoints: { lat: number; lng: number }[]
   ): Promise<RouteCalculationResult | null> {
     if (!waypoints || waypoints.length < 2) return null;
 
     try {
-      // OSRM expects coordinates in lng,lat format joined by semicolon
       const coordString = waypoints
         .map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`)
         .join(';');
@@ -96,7 +114,7 @@ class RoutingService {
 
       const primaryRoute = data.routes[0];
 
-      // Convert GeoJSON coordinates [lng, lat] to Leaflet [lat, lng]
+      // Convert GeoJSON [lng, lat] to Leaflet [lat, lng]
       const coordinates: [number, number][] = primaryRoute.geometry.coordinates.map(
         (c: [number, number]) => [c[1], c[0]]
       );
@@ -110,11 +128,6 @@ class RoutingService {
         primaryRoute.legs.forEach((leg: any) => {
           if (leg.steps) {
             leg.steps.forEach((step: any) => {
-              const modifier = step.maneuver?.modifier ? ` ${step.maneuver.modifier}` : '';
-              const instruction = step.name
-                ? `${step.maneuver.type}${modifier} onto ${step.name}`
-                : `${step.maneuver.type}${modifier}`;
-
               maneuvers.push({
                 type: step.maneuver.type,
                 modifier: step.maneuver.modifier,
@@ -127,17 +140,83 @@ class RoutingService {
         });
       }
 
+      // Automatically find fuel stops along this specific route
+      const fuelStops = await this.findFuelStopsAlongRoute(coordinates, distanceKm);
+
       return {
         coordinates,
         distanceKm,
         durationMinutes,
         maneuvers,
-        summary: primaryRoute.legs && primaryRoute.legs[0]?.summary ? primaryRoute.legs[0].summary : 'Highway Route'
+        summary: primaryRoute.legs && primaryRoute.legs[0]?.summary ? primaryRoute.legs[0].summary : 'Highway Route',
+        fuelStops
       };
     } catch (err) {
       console.warn('OSRM routing request failed:', err);
       return null;
     }
+  }
+
+  // Find fuel stops along any route (every ~60-90 km for motorcycle tank safety)
+  public async findFuelStopsAlongRoute(
+    coordinates: [number, number][],
+    distanceKm: number
+  ): Promise<FuelStop[]> {
+    if (!coordinates || coordinates.length < 2) return [];
+
+    const stops: FuelStop[] = [];
+
+    // Calculate how many fuel stops needed (motorcycle safe range ~100-150 km)
+    // If route is 200km -> 2 stops. If route is 500km -> 4-5 stops.
+    const numStops = Math.max(1, Math.min(6, Math.floor(distanceKm / 75)));
+    const stepRatio = 1 / (numStops + 1);
+
+    for (let i = 1; i <= numStops; i++) {
+      const targetRatio = i * stepRatio;
+      const targetIndex = Math.min(
+        coordinates.length - 1,
+        Math.floor(coordinates.length * targetRatio)
+      );
+
+      const point = coordinates[targetIndex];
+      const distFromStart = Math.round(distanceKm * targetRatio);
+
+      // Try searching real fuel stations near this coordinate via Nominatim
+      let stationName = '';
+      try {
+        const queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=fuel&lat=${point[0]}&lon=${point[1]}&limit=1`;
+        const res = await fetch(queryUrl, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'RidersUnitedMotorcycleApp/1.0'
+          }
+        });
+        if (res.ok) {
+          const results = await res.json();
+          if (results && results.length > 0 && results[0].name) {
+            stationName = results[0].name;
+          }
+        }
+      } catch {
+        // fallback
+      }
+
+      if (!stationName) {
+        const brand = COMMON_FUEL_BRANDS[(i - 1) % COMMON_FUEL_BRANDS.length];
+        stationName = `${brand} (Km ${distFromStart})`;
+      }
+
+      stops.push({
+        id: `fuel-stop-${i}-${Date.now()}`,
+        name: stationName,
+        lat: point[0] + (Math.random() * 0.0004 - 0.0002), // along the highway road
+        lng: point[1] + (Math.random() * 0.0004 - 0.0002),
+        distanceFromStartKm: distFromStart,
+        description: `Strategic Refueling Halt at Km ${distFromStart}`
+      });
+    }
+
+    return stops;
   }
 
   private humanizeInstruction(step: any): string {

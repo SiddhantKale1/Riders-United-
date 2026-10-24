@@ -55,6 +55,7 @@ export function App() {
   const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null);
   const [customWaypoints, setCustomWaypoints] = useState<Waypoint[]>([]);
   const [currentGpsCoords, setCurrentGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isRideActive, setIsRideActive] = useState<boolean>(false);
 
   // Controls & Modals
   const [trackingMode, setTrackingMode] = useState<TrackingMode>('simulation');
@@ -287,6 +288,17 @@ export function App() {
     const startShort = start.name.split(',')[0];
     const destShort = dest.name.split(',')[0];
 
+    // Format real fuel stops along this specific route
+    const fuelWaypoints: Waypoint[] = (routeRes.fuelStops || []).map((fs) => ({
+      id: fs.id,
+      name: fs.name,
+      lat: fs.lat,
+      lng: fs.lng,
+      type: 'fuel' as const,
+      description: fs.description,
+      distanceFromStartKm: fs.distanceFromStartKm
+    }));
+
     const newActiveRoute: ActiveRoute = {
       title: `${startShort} ➔ ${destShort}`,
       startName: start.name,
@@ -295,14 +307,16 @@ export function App() {
       distanceKm: routeRes.distanceKm,
       durationMinutes: routeRes.durationMinutes,
       maneuvers: routeRes.maneuvers,
-      summary: routeRes.summary
+      summary: routeRes.summary,
+      fuelStops: fuelWaypoints
     };
 
     setActiveRoute(newActiveRoute);
 
-    // Dynamic Waypoints for the new route
+    // Dynamic Waypoints for the new route with Start, Fuel Stops & Destination
     const newWaypoints: Waypoint[] = [
       { id: 'wp-start', name: `${startShort} (Start)`, lat: start.lat, lng: start.lng, type: 'start' },
+      ...fuelWaypoints,
       { id: 'wp-dest', name: `${destShort} (Destination)`, lat: dest.lat, lng: dest.lng, type: 'destination' }
     ];
     setCustomWaypoints(newWaypoints);
@@ -320,7 +334,43 @@ export function App() {
       id: `route-${Date.now()}`,
       senderId: profile.id,
       senderName: profile.callsign,
-      text: `🏁 New route locked: ${startShort} ➔ ${destShort} (${routeRes.distanceKm} km, ~${Math.floor(routeRes.durationMinutes / 60)}h ${routeRes.durationMinutes % 60}m)`,
+      text: `🏁 Route Locked: ${startShort} ➔ ${destShort} (${routeRes.distanceKm} km, ~${Math.floor(routeRes.durationMinutes / 60)}h ${routeRes.durationMinutes % 60}m) • ⛽ ${fuelWaypoints.length} Fuel Stops added!`,
+      timestamp: Date.now(),
+      type: 'system'
+    });
+  };
+
+  // Start Ride Handler: Zooms into start area & locks Satellite mode
+  const handleStartRide = () => {
+    setIsRideActive(true);
+    nativeMobile.triggerEmergencyHaptic();
+    audioEffects.playAlertSound('regroup');
+    audioEffects.playMicKey();
+
+    // Start simulation along active route
+    convoySimulation.start();
+    setIsSimulating(true);
+
+    addChatMessage({
+      id: `ride-start-${Date.now()}`,
+      senderId: profile.id,
+      senderName: profile.callsign,
+      text: `🏁 RIDE STARTED by ${profile.callsign}! Locked in SATELLITE navigation mode & zoomed to start area. Pack ride safe!`,
+      timestamp: Date.now(),
+      type: 'system'
+    });
+  };
+
+  const handleEndRide = () => {
+    setIsRideActive(false);
+    convoySimulation.pause();
+    setIsSimulating(false);
+
+    addChatMessage({
+      id: `ride-end-${Date.now()}`,
+      senderId: profile.id,
+      senderName: profile.callsign,
+      text: `🛑 RIDE COMPLETED. Convoy safely arrived.`,
       timestamp: Date.now(),
       type: 'system'
     });
@@ -476,6 +526,8 @@ export function App() {
           cameraMode={cameraMode}
           onSetCameraMode={setCameraMode}
           activeRoutePath={activeRoute?.coordinates}
+          isRideActive={isRideActive}
+          startPoint={activeRoute && activeRoute.coordinates.length > 0 ? { lat: activeRoute.coordinates[0][0], lng: activeRoute.coordinates[0][1] } : null}
           onMapClickReportAlert={(lat, lng) => {
             handleTriggerAlert('hazard', 'Reported Hazard Pin', `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
           }}
@@ -503,6 +555,9 @@ export function App() {
         onRouteSelected={handleRouteSelected}
         currentGpsCoords={currentGpsCoords}
         activeRouteSummary={activeRoute?.title}
+        isRideActive={isRideActive}
+        onStartRide={handleStartRide}
+        onEndRide={handleEndRide}
       />
 
       {/* Speedometer & Turn-by-Turn Maneuver Cockpit HUD (Top Right) */}

@@ -15,6 +15,8 @@ interface MapViewProps {
   onSetCameraMode: (mode: CameraMode) => void;
   onMapClickReportAlert?: (lat: number, lng: number) => void;
   activeRoutePath?: [number, number][];
+  isRideActive?: boolean;
+  startPoint?: { lat: number; lng: number } | null;
 }
 
 const TILE_LAYERS: Record<MapTheme, { url: string; subdomains?: string; maxZoom: number; attribution: string }> = {
@@ -48,7 +50,9 @@ export const MapView: React.FC<MapViewProps> = ({
   cameraMode,
   onSetCameraMode,
   onMapClickReportAlert,
-  activeRoutePath
+  activeRoutePath,
+  isRideActive,
+  startPoint
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -59,7 +63,34 @@ export const MapView: React.FC<MapViewProps> = ({
   const routePolylineRef = useRef<L.Polyline | null>(null);
   const glowPolylineRef = useRef<L.Polyline | null>(null);
 
-  const [mapTheme, setMapTheme] = useState<MapTheme>('voyager'); // Default to clean Voyager daylight navigation
+  const [mapTheme, setMapTheme] = useState<MapTheme>('voyager');
+
+  // When Ride is Started: Switch to Satellite view and zoom in close on starting area
+  useEffect(() => {
+    if (isRideActive) {
+      setMapTheme('satellite');
+
+      const map = mapInstanceRef.current;
+      if (map) {
+        let zoomLat = 18.9220;
+        let zoomLng = 72.8347;
+
+        if (startPoint) {
+          zoomLat = startPoint.lat;
+          zoomLng = startPoint.lng;
+        } else if (activeRoutePath && activeRoutePath.length > 0) {
+          zoomLat = activeRoutePath[0][0];
+          zoomLng = activeRoutePath[0][1];
+        } else if (riders.length > 0) {
+          const leader = riders.find(r => r.role === 'leader') || riders[0];
+          zoomLat = leader.lat;
+          zoomLng = leader.lng;
+        }
+
+        map.flyTo([zoomLat, zoomLng], 16, { animate: true, duration: 1.8 });
+      }
+    }
+  }, [isRideActive, startPoint]);
 
   const pathCoordinates = activeRoutePath && activeRoutePath.length > 1
     ? activeRoutePath

@@ -74,6 +74,7 @@ export interface ActiveRoute {
   durationMinutes: number;
   maneuvers: RouteManeuver[];
   summary?: string;
+  fuelStops?: Waypoint[];
 }
 
 export interface RideChannel {
