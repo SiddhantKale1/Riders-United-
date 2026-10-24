@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gauge, Shield, MapPin, Compass, BatteryCharging } from 'lucide-react';
+import { Shield, Compass, BatteryCharging, ArrowUpRight } from 'lucide-react';
 import { Rider, Waypoint } from '../types';
 
 interface CockpitHUDProps {
@@ -19,19 +19,18 @@ export const CockpitHUD: React.FC<CockpitHUDProps> = ({
   const heading = currentRider ? currentRider.heading : 0;
   const battery = currentRider ? currentRider.battery : 95;
 
-  // Pack formation evaluation
-  let spreadStatus = 'OPTIMAL PACK';
-  let spreadColor = 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10';
+  // Formation Spread Logic
+  let spreadLabel = 'Optimal Pack';
+  let spreadBadge = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
 
   if (packSpreadMeters > 2500) {
-    spreadStatus = 'STRAGGLER WARNING';
-    spreadColor = 'text-red-400 border-red-500/40 bg-red-500/10 animate-pulse';
+    spreadLabel = 'Straggler Alert';
+    spreadBadge = 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse';
   } else if (packSpreadMeters > 1500) {
-    spreadStatus = 'PACK STRETCHED';
-    spreadColor = 'text-amber-400 border-amber-500/40 bg-amber-500/10';
+    spreadLabel = 'Pack Stretched';
+    spreadBadge = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
   }
 
-  // Heading cardinal direction
   const getCardinal = (deg: number) => {
     const val = Math.floor((deg / 45) + 0.5);
     const arr = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -39,75 +38,66 @@ export const CockpitHUD: React.FC<CockpitHUDProps> = ({
   };
 
   return (
-    <div className="absolute top-20 right-4 z-20 flex flex-col items-end space-y-2 pointer-events-none select-none max-w-[260px] md:max-w-[280px]">
-      {/* Speedometer Digital HUD Card */}
-      <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-2xl p-3.5 shadow-2xl w-full text-slate-100">
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 mb-2">
-          <div className="flex items-center space-x-1.5 text-xs text-slate-400 font-mono">
-            <Gauge className="w-3.5 h-3.5 text-amber-400" />
-            <span>SPEED HUD</span>
+    <div className="absolute top-20 right-4 z-20 flex flex-col items-end space-y-2 pointer-events-none select-none max-w-[260px] md:max-w-[290px]">
+      {/* BMW Motorrad / CarPlay Style Speed & Nav Card */}
+      <div className="pointer-events-auto glass-panel rounded-3xl p-4 w-full shadow-2xl text-slate-100 flex flex-col">
+        {/* Top telemetry bar */}
+        <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono mb-2">
+          <div className="flex items-center space-x-1.5">
+            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{heading}° {getCardinal(heading)}</span>
           </div>
-          <div className="flex items-center space-x-1 text-xs text-slate-400 font-mono">
+          <div className="flex items-center space-x-1.5">
             <BatteryCharging className="w-3.5 h-3.5 text-emerald-400" />
             <span>{battery}%</span>
           </div>
         </div>
 
-        {/* Speed readout */}
-        <div className="flex items-baseline justify-center my-1">
-          <span className="text-4xl md:text-5xl font-black font-mono tracking-tight text-amber-400">
-            {speed}
-          </span>
-          <span className="text-xs font-mono text-slate-400 ml-1.5 font-bold">KM/H</span>
+        {/* Big Speed Readout */}
+        <div className="flex items-baseline justify-between my-1">
+          <div className="flex items-baseline">
+            <span className="text-5xl font-black tracking-tight text-white font-mono leading-none">
+              {speed}
+            </span>
+            <span className="text-xs font-mono font-bold text-slate-400 ml-1.5 uppercase">
+              km/h
+            </span>
+          </div>
+
+          {/* Convoy Spread Pill */}
+          <div className={`px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold flex items-center space-x-1 ${spreadBadge}`}>
+            <Shield className="w-3 h-3" />
+            <span>{(packSpreadMeters / 1000).toFixed(1)}k</span>
+          </div>
         </div>
 
-        {/* Speed Bar Progress Indicator */}
-        <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden mt-1">
+        {/* Minimalist Speed Bar */}
+        <div className="w-full bg-slate-800/80 rounded-full h-1 overflow-hidden mt-2 mb-3">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-red-500 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 rounded-full transition-all duration-300"
             style={{ width: `${Math.min(100, (speed / 120) * 100)}%` }}
           />
         </div>
 
-        <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono mt-2">
-          <span className="flex items-center space-x-1">
-            <Compass className="w-3 h-3 text-cyan-400" />
-            <span>{heading}° {getCardinal(heading)}</span>
-          </span>
-          <span>TARGET: 75 KM/H</span>
-        </div>
-      </div>
-
-      {/* Pack Formation Telemetry Card */}
-      <div className={`pointer-events-auto backdrop-blur-md border rounded-xl p-2.5 shadow-xl w-full text-xs font-mono ${spreadColor}`}>
-        <div className="flex items-center justify-between">
-          <span className="flex items-center space-x-1.5 font-semibold">
-            <Shield className="w-3.5 h-3.5" />
-            <span>CONVOY SPREAD</span>
-          </span>
-          <span className="font-bold text-sm">
-            {(packSpreadMeters / 1000).toFixed(2)} km
-          </span>
-        </div>
-        <div className="text-[10px] font-bold tracking-wider uppercase mt-1">
-          STATUS: {spreadStatus}
-        </div>
-      </div>
-
-      {/* Destination / Next Pitstop HUD */}
-      <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 shadow-xl w-full text-slate-200 text-xs font-mono">
-        <div className="flex items-center space-x-1.5 text-slate-400 text-[11px] mb-1">
-          <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-          <span>ROUTE NAVIGATION</span>
-        </div>
-
+        {/* Next Waypoint Info (CarPlay Nav style) */}
         {nextWaypoint && (
-          <div className="text-[11px] text-slate-300 truncate">
-            <span className="text-amber-400 font-bold">Next:</span> {nextWaypoint.name}
+          <div className="pt-2 border-t border-white/10 flex items-start space-x-2">
+            <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 mt-0.5">
+              <ArrowUpRight className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <div className="text-xs font-bold text-slate-100 truncate">
+                {nextWaypoint.name}
+              </div>
+              <div className="text-[10px] text-slate-400 truncate">
+                {nextWaypoint.description || 'Highway Waypoint'}
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="flex justify-between items-center text-[11px] text-slate-400 mt-1.5 pt-1.5 border-t border-slate-800/80">
+        {/* Distance Remaining to Goa */}
+        <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-slate-400">
           <span>To Baga Beach, Goa:</span>
           <span className="font-bold text-amber-400">{distanceToDestinationKm} km</span>
         </div>

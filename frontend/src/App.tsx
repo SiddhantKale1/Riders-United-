@@ -377,8 +377,23 @@ export function App() {
   const isLeader = profile.role === 'leader' || (ride && ride.leaderId === profile.id);
 
   return (
-    <div className="flex flex-col w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none text-slate-100">
-      {/* Top Navbar */}
+    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none text-slate-100">
+      {/* Fullscreen Interactive Leaflet Map */}
+      <div className="absolute inset-0 w-full h-full z-0">
+        <MapView
+          riders={riders}
+          waypoints={activeWaypoints}
+          alerts={alerts}
+          currentRiderId={profile.id}
+          cameraMode={cameraMode}
+          onSetCameraMode={setCameraMode}
+          onMapClickReportAlert={(lat, lng) => {
+            handleTriggerAlert('hazard', 'Reported Hazard Pin', `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          }}
+        />
+      </div>
+
+      {/* Floating Modern CarPlay Style Top Island */}
       <Navbar
         ride={ride}
         trackingMode={trackingMode}
@@ -398,47 +413,30 @@ export function App() {
         unreadAlertsCount={alerts.filter((a) => a.active).length}
       />
 
-      {/* Main Map & Cockpit Viewport */}
-      <main className="relative flex-1 w-full h-[calc(100vh-64px)] overflow-hidden">
-        {/* Fullscreen Interactive Leaflet Map */}
-        <MapView
-          riders={riders}
-          waypoints={activeWaypoints}
+      {/* Speedometer & Convoy Spread Cockpit Card (Top Right) */}
+      <CockpitHUD
+        currentRider={currentRider}
+        packSpreadMeters={packSpreadMeters}
+        nextWaypoint={nextWaypoint}
+        distanceToDestinationKm={distanceToDestinationKm}
+      />
+
+      {/* Tactical Alerts Bar & Big PTT Thumb Button (Bottom Center Dock) */}
+      <div className="absolute bottom-6 left-0 right-0 z-20 flex flex-col items-center justify-center px-3 space-y-2.5 pointer-events-none">
+        <TacticalAlertsBar
           alerts={alerts}
+          onTriggerAlert={handleTriggerAlert}
+          onDismissAlert={handleDismissAlert}
+        />
+
+        <PushToTalk
           currentRiderId={profile.id}
-          cameraMode={cameraMode}
-          onSetCameraMode={setCameraMode}
-          onMapClickReportAlert={(lat, lng) => {
-            handleTriggerAlert('hazard', 'Reported Hazard Pin', `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-          }}
+          callsign={profile.callsign}
+          activeSpeaker={activeSpeaker}
+          channel={voiceChannel}
+          onChangeChannel={setVoiceChannel}
         />
-
-        {/* Speedometer & Convoy Spread Cockpit HUD (Top Right) */}
-        <CockpitHUD
-          currentRider={currentRider}
-          packSpreadMeters={packSpreadMeters}
-          nextWaypoint={nextWaypoint}
-          distanceToDestinationKm={distanceToDestinationKm}
-        />
-
-        {/* Tactical Alerts Bar (Bottom Center) */}
-        <div className="absolute bottom-6 left-0 right-0 z-20 flex flex-col items-center justify-center px-3 space-y-3 pointer-events-none">
-          <TacticalAlertsBar
-            alerts={alerts}
-            onTriggerAlert={handleTriggerAlert}
-            onDismissAlert={handleDismissAlert}
-          />
-
-          {/* Big Push-To-Talk Walkie-Talkie Button */}
-          <PushToTalk
-            currentRiderId={profile.id}
-            callsign={profile.callsign}
-            activeSpeaker={activeSpeaker}
-            channel={voiceChannel}
-            onChangeChannel={setVoiceChannel}
-          />
-        </div>
-      </main>
+      </div>
 
       {/* Discord-style Convoy Roster & Voice Channels Drawer */}
       <ConvoyRoster

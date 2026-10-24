@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Radio, Volume2, ShieldAlert } from 'lucide-react';
+import { Mic, Radio, Volume2 } from 'lucide-react';
 import { voiceComms } from '../services/voiceComms';
 
 interface PushToTalkProps {
@@ -23,15 +23,13 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
 }) => {
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
-  const [toggleMode, setToggleMode] = useState(false); // Hold mode by default, toggle option for riders with gloves
+  const [toggleMode, setToggleMode] = useState(false);
   const isTransmittingRef = useRef(false);
 
-  // Sync ref with state
   useEffect(() => {
     isTransmittingRef.current = isTransmitting;
   }, [isTransmitting]);
 
-  // Hook up audio level visualizer
   useEffect(() => {
     voiceComms.setLevelCallback((level) => {
       setAudioLevel(level);
@@ -42,12 +40,9 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
     };
   }, []);
 
-  // Handle Spacebar hotkey for handlebar PTT
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
-
       if ((e.code === 'Space' || e.key === 't' || e.key === 'T') && !isTransmittingRef.current) {
         e.preventDefault();
         startTalking();
@@ -56,7 +51,6 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
-
       if ((e.code === 'Space' || e.key === 't' || e.key === 'T') && isTransmittingRef.current) {
         e.preventDefault();
         if (!toggleMode) {
@@ -107,9 +101,9 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
 
   return (
     <div className="flex flex-col items-center select-none pointer-events-auto">
-      {/* Active Speaker Banner */}
+      {/* Remote Speaker Banner */}
       {isOtherRiderTalking && (
-        <div className="mb-2 px-3 py-1 bg-cyan-950/90 border border-cyan-500/70 text-cyan-300 rounded-full text-xs font-mono flex items-center space-x-2 animate-bounce shadow-lg shadow-cyan-500/20">
+        <div className="mb-2 px-3.5 py-1.5 glass-panel rounded-full text-xs font-mono flex items-center space-x-2 text-cyan-300 border border-cyan-500/40 shadow-xl animate-bounce">
           <Volume2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
           <span>
             <strong>{activeSpeaker.callsign}</strong> transmitting...
@@ -117,74 +111,65 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
         </div>
       )}
 
-      {/* Main Handlebar PTT Button Container */}
+      {/* Modern CarPlay / BMW Motorrad Style Circular PTT Thumb Button */}
       <div className="relative flex items-center justify-center">
-        {/* Pulsing Outer Rings */}
+        {/* Glow rings */}
         {isTransmitting && (
-          <>
-            <div className="absolute w-28 h-28 rounded-full border-2 border-red-500 animate-ping opacity-75"></div>
-            <div className="absolute w-32 h-32 rounded-full border border-red-400 animate-pulse opacity-50"></div>
-          </>
+          <div className="absolute w-24 h-24 rounded-full bg-red-500/30 animate-ping"></div>
+        )}
+        {isOtherRiderTalking && (
+          <div className="absolute w-24 h-24 rounded-full bg-cyan-500/20 animate-ping"></div>
         )}
 
-        {isOtherRiderTalking && !isTransmitting && (
-          <div className="absolute w-24 h-24 rounded-full border border-cyan-400 animate-ping opacity-60"></div>
-        )}
-
-        {/* Big PTT Button */}
         <button
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onContextMenu={(e) => e.preventDefault()}
-          className={`relative w-20 h-20 md:w-22 md:h-22 rounded-full flex flex-col items-center justify-center border-4 shadow-2xl transition-all transform active:scale-95 touch-none ${
+          className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all duration-200 transform active:scale-95 touch-none ${
             isTransmitting
-              ? 'bg-gradient-to-br from-red-600 to-rose-700 border-red-400 shadow-red-500/50 animate-radio-glow'
+              ? 'bg-gradient-to-tr from-red-600 to-rose-500 text-white shadow-red-500/50 animate-ptt-pulse ring-4 ring-red-400/30'
               : isOtherRiderTalking
-              ? 'bg-slate-900 border-cyan-500 text-cyan-400 shadow-cyan-500/30'
-              : 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700 text-slate-200 hover:border-amber-400 hover:text-amber-400'
+              ? 'glass-panel border-cyan-400/80 text-cyan-400 shadow-cyan-500/30 ring-2 ring-cyan-400/30'
+              : 'glass-panel text-slate-100 hover:border-amber-400 hover:text-amber-400 hover:shadow-amber-500/20'
           }`}
           title="Hold Spacebar or Click & Hold to Transmit Voice"
         >
           {isTransmitting ? (
-            <Radio className="w-7 h-7 text-white animate-pulse" />
+            <Radio className="w-7 h-7 animate-pulse" />
           ) : (
             <Mic className="w-7 h-7" />
           )}
 
-          <span className="text-[10px] font-black font-mono tracking-wider uppercase mt-1 leading-none">
-            {isTransmitting ? 'LIVE' : toggleMode ? (isTransmitting ? 'STOP' : 'TALK') : 'PTT'}
+          <span className="text-[10px] font-mono font-bold tracking-wider uppercase mt-1">
+            {isTransmitting ? 'LIVE' : toggleMode ? (isTransmitting ? 'OFF' : 'PTT') : 'PTT'}
           </span>
         </button>
       </div>
 
-      {/* Audio Waveform Equalizer Display (Active while transmitting) */}
+      {/* Voice Activity Audio Bars */}
       <div className="mt-2 flex items-center space-x-1 h-3">
-        {[20, 50, 80, 100, 75, 40, 90, 60].map((baseHeight, i) => {
-          const dynamicHeight = isTransmitting
-            ? Math.max(3, Math.min(16, (audioLevel / 100) * baseHeight * 0.18 + Math.random() * 4))
+        {[20, 60, 90, 100, 80, 50, 90, 40].map((h, i) => {
+          const barHeight = isTransmitting
+            ? Math.max(3, Math.min(14, (audioLevel / 100) * h * 0.16 + Math.random() * 3))
             : 3;
           return (
             <span
               key={i}
               className={`w-1 rounded-full transition-all duration-75 ${
-                isTransmitting
-                  ? 'bg-red-400'
-                  : isOtherRiderTalking
-                  ? 'bg-cyan-400'
-                  : 'bg-slate-700'
+                isTransmitting ? 'bg-red-400' : isOtherRiderTalking ? 'bg-cyan-400' : 'bg-white/10'
               }`}
-              style={{ height: `${dynamicHeight}px` }}
+              style={{ height: `${barHeight}px` }}
             />
           );
         })}
       </div>
 
-      {/* Comms Bar Footer: Channel & Mode */}
-      <div className="mt-1 flex items-center space-x-2 text-[10px] text-slate-400 font-mono">
+      {/* Minimal Footer Capsule */}
+      <div className="mt-1 flex items-center space-x-2 text-[10px] font-mono text-slate-400">
         <select
           value={channel}
           onChange={(e) => onChangeChannel(e.target.value)}
-          className="bg-slate-900/90 border border-slate-800 text-amber-400 rounded px-1.5 py-0.5 text-[10px] focus:outline-none"
+          className="bg-slate-900/80 border border-white/10 text-amber-400 rounded-lg px-2 py-0.5 text-[10px] focus:outline-none"
         >
           <option value="convoy-main">#convoy-main</option>
           <option value="captains-briefing">#captains-briefing</option>
@@ -196,7 +181,7 @@ export const PushToTalk: React.FC<PushToTalkProps> = ({
           className="hover:text-slate-200 transition-colors"
           title="Toggle between Hold-to-Talk and Tap-to-Talk"
         >
-          {toggleMode ? '[TAP]' : '[HOLD/SPACE]'}
+          {toggleMode ? '[TAP]' : '[SPACE]'}
         </button>
       </div>
     </div>

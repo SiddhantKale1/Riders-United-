@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, LogIn, Bike, User, ShieldCheck } from 'lucide-react';
+import { X, Plus, LogIn, Bike, User } from 'lucide-react';
 import { RiderRole } from '../types';
 
 interface CreateJoinModalProps {
@@ -76,12 +76,12 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 select-none animate-fadeIn">
-      <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-3 sm:p-5 select-none animate-fadeIn">
+      <div className="glass-panel rounded-3xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col border border-white/10">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 font-bold shadow-md">
               <Bike className="w-4 h-4" />
             </div>
             <h2 className="text-base font-bold text-slate-100">
@@ -91,19 +91,19 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white glass-button transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-800 bg-slate-900/40 text-xs font-semibold">
+        {/* Tabs */}
+        <div className="flex border-b border-white/10 text-xs font-semibold">
           <button
             onClick={() => setTab('profile')}
             className={`flex-1 py-2.5 text-center transition-colors flex items-center justify-center space-x-1.5 border-b-2 ${
               tab === 'profile'
-                ? 'border-amber-400 text-amber-400 bg-slate-800/40'
+                ? 'border-amber-400 text-amber-400 bg-white/5'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -115,7 +115,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
             onClick={() => setTab('join')}
             className={`flex-1 py-2.5 text-center transition-colors flex items-center justify-center space-x-1.5 border-b-2 ${
               tab === 'join'
-                ? 'border-amber-400 text-amber-400 bg-slate-800/40'
+                ? 'border-amber-400 text-amber-400 bg-white/5'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -127,7 +127,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
             onClick={() => setTab('create')}
             className={`flex-1 py-2.5 text-center transition-colors flex items-center justify-center space-x-1.5 border-b-2 ${
               tab === 'create'
-                ? 'border-amber-400 text-amber-400 bg-slate-800/40'
+                ? 'border-amber-400 text-amber-400 bg-white/5'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -146,7 +146,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
                   placeholder="e.g. Vikram Singh"
                   required
                 />
@@ -158,7 +158,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
                   type="text"
                   value={callsign}
                   onChange={(e) => setCallsign(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
                   placeholder="e.g. Thunder Lead"
                   required
                 />
@@ -170,7 +170,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
                   type="text"
                   value={bikeModel}
                   onChange={(e) => setBikeModel(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
                   placeholder="e.g. Royal Enfield Himalayan 450"
                   required
                 />
@@ -198,7 +198,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as RiderRole)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
                 >
                   <option value="leader">Road Captain (Leader)</option>
                   <option value="scout">Point Scout</option>
@@ -209,7 +209,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider mt-4"
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider mt-4"
               >
                 Save Profile
               </button>
@@ -225,17 +225,17 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
                   value={rideCode}
                   onChange={(e) => setRideCode(e.target.value)}
                   placeholder="e.g. MUM-GOA"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-center font-mono text-base font-bold text-amber-400 placeholder-slate-600 uppercase tracking-widest focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-3 py-3 text-center font-mono text-base font-bold text-amber-400 placeholder-slate-600 uppercase tracking-widest focus:outline-none focus:border-amber-400"
                   required
                 />
-                <p className="text-[11px] text-slate-500 mt-1.5 text-center">
-                  Enter the 6-character code shared by your Ride Leader. Default active room: <strong>MUM-GOA</strong>
+                <p className="text-[11px] text-slate-400 mt-2 text-center">
+                  Default room: <strong className="text-amber-400">MUM-GOA</strong> (Free & zero API keys needed)
                 </p>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider"
+                className="w-full py-3 rounded-2xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider"
               >
                 Join Ride Channel
               </button>
@@ -251,7 +251,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Goa Monsoon Thunder Run"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-400"
+                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
                   required
                 />
               </div>
@@ -264,17 +264,17 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
                   onChange={(e) => setNewTargetSpeed(Number(e.target.value))}
                   min={30}
                   max={140}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
                 />
               </div>
 
-              <div className="p-3 bg-slate-900/60 border border-slate-800 rounded-xl text-[11px] text-slate-400">
-                You will be designated as the <strong>Road Captain (Ride Leader)</strong> and a private ride code will be generated.
+              <div className="p-3 glass-pill rounded-xl text-[11px] text-slate-400">
+                You will be designated as the <strong>Road Captain</strong> and a private ride code will be generated.
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider"
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider"
               >
                 Create Ride Lobby
               </button>
