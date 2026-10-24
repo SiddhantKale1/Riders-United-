@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { Rider, Waypoint, TacticalAlert, CameraMode } from '../types';
 import { MUMBAI_GOA_DETAILED_PATH } from '../services/simulationEngine';
-import { Crosshair, Navigation, Compass } from 'lucide-react';
+import { Crosshair, Navigation, Compass, Layers, Sun, Moon, Globe } from 'lucide-react';
+
+export type MapTheme = 'voyager' | 'dark' | 'satellite';
 
 interface MapViewProps {
   riders: Rider[];
@@ -13,6 +15,29 @@ interface MapViewProps {
   onSetCameraMode: (mode: CameraMode) => void;
   onMapClickReportAlert?: (lat: number, lng: number) => void;
 }
+
+const TILE_LAYERS: Record<MapTheme, { url: string; subdomains?: string; maxZoom: number; attribution: string }> = {
+  // Free public Carto Voyager — NO API KEY NEEDED
+  voyager: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    subdomains: 'abcd',
+    maxZoom: 19,
+    attribution: '© OpenStreetMap, © CARTO'
+  },
+  // Free public Carto Dark Matter — NO API KEY NEEDED
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    subdomains: 'abcd',
+    maxZoom: 19,
+    attribution: '© OpenStreetMap, © CARTO'
+  },
+  // Free public Esri World Imagery Satellite — NO API KEY NEEDED
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    maxZoom: 18,
+    attribution: '© Esri, Maxar, Earthstar Geographics'
+  }
+};
 
 export const MapView: React.FC<MapViewProps> = ({
   riders,
@@ -25,10 +50,14 @@ export const MapView: React.FC<MapViewProps> = ({
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const activeTileLayerRef = useRef<L.TileLayer | null>(null);
   const ridersLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const waypointsLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const alertsLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const routePolylineRef = useRef<L.Polyline | null>(null);
+  const glowPolylineRef = useRef<L.Polyline | null>(null);
+
+  const [mapTheme, setMapTheme] = useState<MapTheme>('voyager'); // Default to clean Voyager daylight navigation
 
   // Initialize Map
   useEffect(() => {
@@ -43,11 +72,13 @@ export const MapView: React.FC<MapViewProps> = ({
       attributionControl: false
     });
 
-    // Dark Tactical / CarPlay Tile Layer (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd'
+    // Add Initial Tile Layer
+    const tileConfig = TILE_LAYERS[mapTheme];
+    const initialTileLayer = L.tileLayer(tileConfig.url, {
+      maxZoom: tileConfig.maxZoom,
+      subdomains: tileConfig.subdomains || 'abc'
     }).addTo(map);
+    activeTileLayerRef.current = initialTileLayer;
 
     // Zoom control at bottom right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -70,38 +101,71 @@ export const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
+  // Switch Tile Layer when mapTheme changes
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (activeTileLayerRef.current) {
+      map.removeLayer(activeTileLayerRef.current);
+    }
+
+    const tileConfig = TILE_LAYERS[mapTheme];
+    const newTileLayer = L.tileLayer(tileConfig.url, {
+      maxZoom: tileConfig.maxZoom,
+      subdomains: tileConfig.subdomains || 'abc'
+    }).addTo(map);
+
+    // Bring tile layer to back so polylines and markers stay on top
+    newTileLayer.bringToBack();
+    activeTileLayerRef.current = newTileLayer;
+
+    // Update route polyline color to match theme
+    if (routePolylineRef.current) {
+      const coreColor = mapTheme === 'voyager' ? '#2563eb' : mapTheme === 'dark' ? '#38bdf8' : '#38bdf8';
+      const glowColor = mapTheme === 'voyager' ? '#60a5fa' : mapTheme === 'dark' ? '#0284c7' : '#0369a1';
+      routePolylineRef.current.setStyle({ color: coreColor });
+      if (glowPolylineRef.current) {
+        glowPolylineRef.current.setStyle({ color: glowColor });
+      }
+    }
+  }, [mapTheme]);
+
   // Draw Highway Route Polyline (Glow + Neon Core)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    if (routePolylineRef.current) {
-      map.removeLayer(routePolylineRef.current);
-    }
+    if (routePolylineRef.current) map.removeLayer(routePolylineRef.current);
+    if (glowPolylineRef.current) map.removeLayer(glowPolylineRef.current);
+
+    const glowColor = mapTheme === 'voyager' ? '#60a5fa' : '#0284c7';
+    const coreColor = mapTheme === 'voyager' ? '#2563eb' : '#38bdf8';
 
     const glowLine = L.polyline(MUMBAI_GOA_DETAILED_PATH, {
-      color: '#0284c7',
+      color: glowColor,
       weight: 8,
-      opacity: 0.25,
+      opacity: 0.35,
       lineCap: 'round',
       lineJoin: 'round'
     }).addTo(map);
 
     const mainLine = L.polyline(MUMBAI_GOA_DETAILED_PATH, {
-      color: '#38bdf8',
-      weight: 3.5,
-      opacity: 0.85,
+      color: coreColor,
+      weight: 4,
+      opacity: 0.9,
       lineCap: 'round',
       lineJoin: 'round'
     }).addTo(map);
 
+    glowPolylineRef.current = glowLine;
     routePolylineRef.current = mainLine;
 
     return () => {
       map.removeLayer(glowLine);
       map.removeLayer(mainLine);
     };
-  }, []);
+  }, [mapTheme]);
 
   // Update Waypoint Markers
   useEffect(() => {
@@ -116,31 +180,31 @@ export const MapView: React.FC<MapViewProps> = ({
 
       if (wp.type === 'start') {
         icon = '🚩';
-        ring = 'border-emerald-400 bg-emerald-950/80 text-emerald-400';
+        ring = 'border-emerald-500 bg-emerald-600 text-white';
       } else if (wp.type === 'destination') {
         icon = '🏁';
-        ring = 'border-amber-400 bg-amber-950/80 text-amber-400';
+        ring = 'border-amber-400 bg-amber-500 text-slate-950 font-black';
       } else if (wp.type === 'fuel') {
         icon = '⛽';
-        ring = 'border-orange-400 bg-orange-950/80 text-orange-400';
+        ring = 'border-orange-500 bg-orange-600 text-white';
       } else if (wp.type === 'food') {
         icon = '☕';
-        ring = 'border-amber-300 bg-amber-950/80 text-amber-300';
+        ring = 'border-amber-500 bg-amber-600 text-white';
       } else if (wp.type === 'regroup') {
         icon = '🔄';
-        ring = 'border-blue-400 bg-blue-950/80 text-blue-400';
+        ring = 'border-blue-500 bg-blue-600 text-white';
       }
 
       const customIcon = L.divIcon({
         className: 'custom-wp-icon',
         html: `
           <div class="relative group cursor-pointer flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
-            <div class="w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-bold border ${ring} shadow-xl backdrop-blur-md transition-transform group-hover:scale-125">
+            <div class="w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-bold border-2 ${ring} shadow-xl backdrop-blur-md transition-transform group-hover:scale-125">
               ${icon}
             </div>
             <div class="hidden group-hover:block absolute top-9 glass-panel text-slate-100 text-[11px] px-2.5 py-1 rounded-xl shadow-2xl whitespace-nowrap z-50 pointer-events-none">
               <span class="font-bold text-amber-400">${wp.name}</span>
-              ${wp.description ? `<p class="text-[10px] text-slate-400">${wp.description}</p>` : ''}
+              ${wp.description ? `<p class="text-[10px] text-slate-300">${wp.description}</p>` : ''}
             </div>
           </div>
         `,
@@ -204,11 +268,11 @@ export const MapView: React.FC<MapViewProps> = ({
       const isTalking = rider.isTalking;
 
       let roleBadge = '';
-      if (isLeader) roleBadge = '<span class="absolute -top-1.5 -left-1.5 text-[9px] bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full font-black">👑</span>';
-      else if (isSweeper) roleBadge = '<span class="absolute -top-1.5 -left-1.5 text-[9px] bg-cyan-500 text-slate-950 px-1 py-0.2 rounded-full font-black">🛡️</span>';
+      if (isLeader) roleBadge = '<span class="absolute -top-1.5 -left-1.5 text-[9px] bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full font-black shadow-sm">👑</span>';
+      else if (isSweeper) roleBadge = '<span class="absolute -top-1.5 -left-1.5 text-[9px] bg-cyan-500 text-slate-950 px-1 py-0.2 rounded-full font-black shadow-sm">🛡️</span>';
 
       const talkingGlow = isTalking
-        ? '<div class="absolute -inset-2 rounded-full bg-red-500/40 animate-ping"></div>'
+        ? '<div class="absolute -inset-2.5 rounded-full bg-red-500/50 animate-ping"></div>'
         : '';
 
       const meRing = isMe
@@ -219,11 +283,11 @@ export const MapView: React.FC<MapViewProps> = ({
         className: 'custom-rider-icon',
         html: `
           <div class="relative flex flex-col items-center select-none cursor-pointer group" style="transform: translate(-50%, -50%);">
-            <!-- Modern Sleek Pill: Callsign & Speed -->
-            <div class="mb-1 glass-pill px-2 py-0.5 rounded-full shadow-2xl whitespace-nowrap text-[10px] font-mono flex items-center space-x-1.5">
+            <!-- Sleek CarPlay Style Pill: Callsign & Speed -->
+            <div class="mb-1 glass-pill px-2.5 py-0.5 rounded-full shadow-2xl whitespace-nowrap text-[10px] font-mono flex items-center space-x-1.5">
               <span class="font-bold" style="color: ${rider.avatarColor}">${rider.callsign}</span>
               <span class="text-white/20">•</span>
-              <span class="text-slate-300 font-semibold">${rider.speed} km/h</span>
+              <span class="text-slate-200 font-semibold">${rider.speed} km/h</span>
             </div>
 
             <!-- Motorcycle Avatar with Heading Arrow -->
@@ -236,13 +300,13 @@ export const MapView: React.FC<MapViewProps> = ({
                 class="absolute w-11 h-11 flex items-center justify-center transition-transform duration-500 ease-out pointer-events-none"
                 style="transform: rotate(${rider.heading}deg);"
               >
-                <div class="w-0 h-0 border-l-[4.5px] border-l-transparent border-r-[4.5px] border-r-transparent border-b-[8px] border-b-amber-400 absolute -top-1.5 filter drop-shadow"></div>
+                <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[9px] border-b-amber-400 absolute -top-1.5 filter drop-shadow"></div>
               </div>
 
               <!-- Sleek Rounded Avatar -->
               <div
                 class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shadow-2xl transition-transform group-hover:scale-125 ${meRing}"
-                style="background-color: ${rider.avatarColor}; color: #07090e; box-shadow: 0 0 20px ${rider.avatarColor}90;"
+                style="background-color: ${rider.avatarColor}; color: #07090e; box-shadow: 0 0 18px ${rider.avatarColor}90;"
               >
                 🏍️
               </div>
@@ -274,45 +338,90 @@ export const MapView: React.FC<MapViewProps> = ({
     <div className="relative w-full h-full overflow-hidden bg-slate-950">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Modern Floating Camera Mode Capsule (Top Left) */}
-      <div className="absolute top-20 left-4 z-20 flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1">
-        <button
-          onClick={() => onSetCameraMode('convoy')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-            cameraMode === 'convoy'
-              ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-          title="Fit All Convoy Riders"
-        >
-          <Crosshair className="w-3.5 h-3.5" />
-          <span>Convoy</span>
-        </button>
+      {/* Floating Camera & Map Theme Controls (Top Left) */}
+      <div className="absolute top-20 left-4 z-20 flex flex-col space-y-2 pointer-events-auto">
+        {/* Camera Modes */}
+        <div className="flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1">
+          <button
+            onClick={() => onSetCameraMode('convoy')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              cameraMode === 'convoy'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Fit All Convoy Riders"
+          >
+            <Crosshair className="w-3.5 h-3.5" />
+            <span>Convoy</span>
+          </button>
 
-        <button
-          onClick={() => onSetCameraMode('leader')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-            cameraMode === 'leader'
-              ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-          title="Follow Leader"
-        >
-          <span>👑 Lead</span>
-        </button>
+          <button
+            onClick={() => onSetCameraMode('leader')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              cameraMode === 'leader'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Follow Leader"
+          >
+            <span>👑 Lead</span>
+          </button>
 
-        <button
-          onClick={() => onSetCameraMode('me')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-            cameraMode === 'me'
-              ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-          title="Center on My Bike"
-        >
-          <Navigation className="w-3.5 h-3.5" />
-          <span>Me</span>
-        </button>
+          <button
+            onClick={() => onSetCameraMode('me')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              cameraMode === 'me'
+                ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Center on My Bike"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span>Me</span>
+          </button>
+        </div>
+
+        {/* Free Map Themes (Voyager / Dark / Satellite) */}
+        <div className="flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1 self-start">
+          <button
+            onClick={() => setMapTheme('voyager')}
+            className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1 transition-all ${
+              mapTheme === 'voyager'
+                ? 'bg-blue-600 text-white font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Free Carto Voyager (Clean Daylight Roads - Zero Key)"
+          >
+            <Sun className="w-3 h-3" />
+            <span>Voyager</span>
+          </button>
+
+          <button
+            onClick={() => setMapTheme('dark')}
+            className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1 transition-all ${
+              mapTheme === 'dark'
+                ? 'bg-slate-800 text-amber-400 font-bold shadow-sm border border-white/10'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Free Carto Dark Matter (Night Tactical - Zero Key)"
+          >
+            <Moon className="w-3 h-3" />
+            <span>Dark</span>
+          </button>
+
+          <button
+            onClick={() => setMapTheme('satellite')}
+            className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1 transition-all ${
+              mapTheme === 'satellite'
+                ? 'bg-emerald-600 text-white font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Free Satellite Aerial (Terrain & Coast - Zero Key)"
+          >
+            <Globe className="w-3 h-3" />
+            <span>Sat</span>
+          </button>
+        </div>
       </div>
 
       {/* Highway Label (Bottom Left) */}
