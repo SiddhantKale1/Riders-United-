@@ -310,53 +310,57 @@ export const MapView: React.FC<MapViewProps> = ({
       const isMe = rider.id === currentRiderId;
       const isTalking = rider.isTalking;
 
-      let roleBadge = '';
-      if (isLeader) roleBadge = '<span class="absolute -top-1.5 -left-1.5 text-[9px] bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full font-black shadow-sm">👑</span>';
-      else if (isSweeper) roleBadge = '<span class="absolute -top-1.5 -left-1.5 text-[9px] bg-cyan-500 text-slate-950 px-1 py-0.2 rounded-full font-black shadow-sm">🛡️</span>';
+      let borderClass = 'border-white/80 shadow-md';
+      let roleIcon = '';
+      if (isLeader) {
+        borderClass = 'border-amber-400 ring-2 ring-amber-400/30';
+        roleIcon = '<span class="absolute -top-1 -right-1 text-[8px] bg-amber-500 text-slate-950 px-0.5 rounded-full font-black">👑</span>';
+      } else if (isSweeper) {
+        borderClass = 'border-cyan-400 ring-2 ring-cyan-400/30';
+        roleIcon = '<span class="absolute -top-1 -right-1 text-[8px] bg-cyan-500 text-slate-950 px-0.5 rounded-full font-black">🛡️</span>';
+      } else if (isMe) {
+        borderClass = 'border-emerald-400 ring-2 ring-emerald-400/40';
+      }
 
       const talkingGlow = isTalking
-        ? '<div class="absolute -inset-2.5 rounded-full bg-red-500/50 animate-ping"></div>'
+        ? '<div class="absolute -inset-2.5 rounded-full bg-cyan-400/50 animate-ping"></div>'
         : '';
 
-      const meRing = isMe
-        ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950'
-        : '';
+      const riderInitial = rider.callsign ? rider.callsign.charAt(0).toUpperCase() : 'R';
 
       const riderIcon = L.divIcon({
         className: 'custom-rider-icon',
         html: `
           <div class="relative flex flex-col items-center select-none cursor-pointer group" style="transform: translate(-50%, -50%);">
-            <!-- Sleek CarPlay Style Pill: Callsign & Speed -->
-            <div class="mb-1 glass-pill px-2.5 py-0.5 rounded-full shadow-2xl whitespace-nowrap text-[10px] font-mono flex items-center space-x-1.5">
-              <span class="font-bold" style="color: ${rider.avatarColor}">${rider.callsign}</span>
-              <span class="text-white/20">•</span>
-              <span class="text-slate-200 font-semibold">${rider.speed} km/h</span>
+            <!-- Google Maps Directional Arrow -->
+            <div
+              class="absolute w-10 h-10 flex items-center justify-center transition-transform duration-300 ease-out pointer-events-none"
+              style="transform: rotate(${rider.heading}deg);"
+            >
+              <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] border-b-cyan-400 absolute -top-1.5 filter drop-shadow"></div>
             </div>
 
-            <!-- Motorcycle Avatar with Heading Arrow -->
+            <!-- Authentic Google Maps Clean Location Puck -->
             <div class="relative flex items-center justify-center">
               ${talkingGlow}
-              ${roleBadge}
-
-              <!-- Heading Direction Arrow -->
               <div
-                class="absolute w-11 h-11 flex items-center justify-center transition-transform duration-500 ease-out pointer-events-none"
-                style="transform: rotate(${rider.heading}deg);"
+                class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black shadow-xl border-2 ${borderClass} transition-transform group-hover:scale-125"
+                style="background-color: ${rider.avatarColor}; color: #0a0d14;"
               >
-                <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[9px] border-b-amber-400 absolute -top-1.5 filter drop-shadow"></div>
+                ${riderInitial}
               </div>
+              ${roleIcon}
+            </div>
 
-              <!-- Sleek Rounded Avatar -->
-              <div
-                class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shadow-2xl transition-transform group-hover:scale-125 ${meRing}"
-                style="background-color: ${rider.avatarColor}; color: #07090e; box-shadow: 0 0 18px ${rider.avatarColor}90;"
-              >
-                🏍️
-              </div>
+            <!-- Crisp Callsign & Speed Micro-Label -->
+            <div class="mt-1 bg-slate-950/85 backdrop-blur-md border border-white/15 px-1.5 py-0.5 rounded-md shadow-lg text-[9px] font-mono flex items-center space-x-1 whitespace-nowrap">
+              <span class="font-bold" style="color: ${rider.avatarColor}">${rider.callsign.split(' ')[0]}</span>
+              <span class="text-white/30">•</span>
+              <span class="text-slate-300 font-semibold">${rider.speed}k</span>
             </div>
           </div>
         `,
-        iconSize: [36, 48],
+        iconSize: [36, 44],
         iconAnchor: [0, 0]
       });
 
@@ -381,97 +385,41 @@ export const MapView: React.FC<MapViewProps> = ({
     <div className="relative w-full h-full overflow-hidden bg-slate-950">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Bottom Left Dock: Camera Modes, Map Themes & Route Label */}
-      <div className="absolute bottom-4 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto max-w-[80vw]">
-        {/* Camera Modes */}
-        <div className="flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1">
+      {/* Floating Right FAB Action Stack (Google Maps Style: Layer & Recenter) */}
+      <div className="absolute right-4 top-20 z-20 flex flex-col items-center space-y-2 pointer-events-auto">
+        {/* Layer Switcher (Cycles Voyager -> Dark -> Satellite) */}
+        <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-1 shadow-xl flex flex-col space-y-1">
           <button
-            onClick={() => onSetCameraMode('convoy')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-              cameraMode === 'convoy'
-                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Fit All Convoy Riders"
+            onClick={() => {
+              const nextTheme: MapTheme = mapTheme === 'voyager' ? 'dark' : mapTheme === 'dark' ? 'satellite' : 'voyager';
+              setMapTheme(nextTheme);
+            }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+            title={`Map Layer: ${mapTheme.toUpperCase()} (Click to switch)`}
           >
-            <Crosshair className="w-3.5 h-3.5" />
-            <span>Convoy</span>
-          </button>
-
-          <button
-            onClick={() => onSetCameraMode('leader')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              cameraMode === 'leader'
-                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Follow Leader"
-          >
-            <span>👑 Lead</span>
-          </button>
-
-          <button
-            onClick={() => onSetCameraMode('me')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
-              cameraMode === 'me'
-                ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Center on My Bike"
-          >
-            <Navigation className="w-3.5 h-3.5" />
-            <span>Me</span>
+            {mapTheme === 'voyager' && <Sun className="w-4 h-4 text-amber-400" />}
+            {mapTheme === 'dark' && <Moon className="w-4 h-4 text-cyan-400" />}
+            {mapTheme === 'satellite' && <Globe className="w-4 h-4 text-emerald-400" />}
           </button>
         </div>
 
-        {/* Free Map Themes (Voyager / Dark / Satellite) */}
-        <div className="flex items-center glass-pill rounded-2xl p-1 shadow-2xl space-x-1">
+        {/* Camera Recenter FAB (Cycles Convoy -> Lead -> Me) */}
+        <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-1 shadow-xl flex flex-col space-y-1">
           <button
-            onClick={() => setMapTheme('voyager')}
-            className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1 transition-all ${
-              mapTheme === 'voyager'
-                ? 'bg-blue-600 text-white font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Free Carto Voyager (Clean Daylight Roads - Zero Key)"
+            onClick={() => {
+              const nextMode: CameraMode = cameraMode === 'convoy' ? 'leader' : cameraMode === 'leader' ? 'me' : 'convoy';
+              onSetCameraMode(nextMode);
+            }}
+            className="w-10 h-10 rounded-xl flex flex-col items-center justify-center text-slate-200 hover:text-white hover:bg-white/10 transition-all relative"
+            title={`Camera: ${cameraMode.toUpperCase()} (Click to switch)`}
           >
-            <Sun className="w-3 h-3" />
-            <span>Voyager</span>
+            {cameraMode === 'convoy' && <Crosshair className="w-4 h-4 text-cyan-400" />}
+            {cameraMode === 'leader' && <span className="text-xs">👑</span>}
+            {cameraMode === 'me' && <Navigation className="w-4 h-4 text-emerald-400" />}
+            <span className="text-[8px] font-black font-mono uppercase tracking-tighter text-slate-400 leading-none mt-0.5">
+              {cameraMode === 'convoy' ? 'PACK' : cameraMode === 'leader' ? 'LEAD' : 'ME'}
+            </span>
           </button>
-
-          <button
-            onClick={() => setMapTheme('dark')}
-            className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1 transition-all ${
-              mapTheme === 'dark'
-                ? 'bg-slate-800 text-amber-400 font-bold shadow-sm border border-white/10'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Free Carto Dark Matter (Night Tactical - Zero Key)"
-          >
-            <Moon className="w-3 h-3" />
-            <span>Dark</span>
-          </button>
-
-          <button
-            onClick={() => setMapTheme('satellite')}
-            className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1 transition-all ${
-              mapTheme === 'satellite'
-                ? 'bg-emerald-600 text-white font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Free Satellite Aerial (Terrain & Coast - Zero Key)"
-          >
-            <Globe className="w-3 h-3" />
-            <span>Sat</span>
-          </button>
-        </div>
-
-        {/* Route Label */}
-        <div className="hidden lg:flex items-center space-x-2 glass-pill rounded-xl px-3 py-1.5 text-xs font-mono text-slate-300">
-          <Compass className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="text-amber-400 font-bold">LIVE CONVOY</span>
-          <span className="text-white/20">|</span>
-          <span>Landscape Cockpit Mode</span>
         </div>
       </div>
     </div>

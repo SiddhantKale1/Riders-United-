@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Navbar } from './components/Navbar';
 import { MapView } from './components/MapView';
-import { PushToTalk } from './components/PushToTalk';
-import { CockpitHUD } from './components/CockpitHUD';
-import { TacticalAlertsBar } from './components/TacticalAlertsBar';
+import { GoogleMapsTurnCard } from './components/GoogleMapsTurnCard';
+import { GoogleMapsTopBar } from './components/GoogleMapsTopBar';
+import { SpeedometerPill } from './components/SpeedometerPill';
+import { GoogleMapsBottomBar } from './components/GoogleMapsBottomBar';
+import { HazardReportModal } from './components/HazardReportModal';
+import { FuelStopsModal } from './components/FuelStopsModal';
 import { ConvoyRoster } from './components/ConvoyRoster';
 import { RouteScheduleModal } from './components/RouteScheduleModal';
 import { CreateJoinModal } from './components/CreateJoinModal';
@@ -75,6 +77,8 @@ export function App() {
   const [isRosterOpen, setIsRosterOpen] = useState<boolean>(false);
   const [isRouteOpen, setIsRouteOpen] = useState<boolean>(false);
   const [isRideModalOpen, setIsRideModalOpen] = useState<boolean>(false);
+  const [isHazardModalOpen, setIsHazardModalOpen] = useState<boolean>(false);
+  const [isFuelModalOpen, setIsFuelModalOpen] = useState<boolean>(false);
 
   // Initialize Socket.io and Load Initial Ride
   useEffect(() => {
@@ -534,8 +538,15 @@ export function App() {
         />
       </div>
 
-      {/* Floating Modern CarPlay Style Top Island with Route Search Anywhere */}
-      <Navbar
+      {/* Top Left: Authentic Google Maps Turn-by-Turn Card */}
+      <GoogleMapsTurnCard
+        currentManeuver={activeRoute?.maneuvers ? activeRoute.maneuvers[0] : null}
+        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Baga Beach, Goa'}
+        distanceToDestinationKm={distanceToDestinationKm}
+      />
+
+      {/* Top Center & Right: Google Maps Search Anywhere & Quick Settings */}
+      <GoogleMapsTopBar
         ride={ride}
         trackingMode={trackingMode}
         onToggleTrackingMode={handleToggleTrackingMode}
@@ -543,53 +554,56 @@ export function App() {
         onToggleSound={handleToggleSound}
         wakeLockActive={wakeLockActive}
         onToggleWakeLock={handleToggleWakeLock}
-        isSimulating={isSimulating}
-        simSpeed={simSpeed}
-        onToggleSimulation={handleToggleSimulation}
-        onChangeSimSpeed={handleChangeSimSpeed}
-        onOpenRoster={() => setIsRosterOpen(true)}
-        onOpenRoute={() => setIsRouteOpen(true)}
-        onOpenAlerts={() => setIsRosterOpen(true)}
         onOpenRideModal={() => setIsRideModalOpen(true)}
-        unreadAlertsCount={alerts.filter((a) => a.active).length}
         onRouteSelected={handleRouteSelected}
         currentGpsCoords={currentGpsCoords}
         activeRouteSummary={activeRoute?.title}
+        isLeader={Boolean(isLeader)}
+        alerts={alerts}
+        onDismissAlert={handleDismissAlert}
+      />
+
+      {/* Bottom Left: Authentic Google Maps Speedometer & Convoy Spread Pill */}
+      <SpeedometerPill
+        speed={currentRider ? currentRider.speed : 78}
+        heading={currentRider ? currentRider.heading : 195}
+        packSpreadMeters={packSpreadMeters}
+      />
+
+      {/* Bottom Right: Authentic Google Maps Navigation Bar (ETA, PTT, Fuel, Hazard, Squad, Start/End) */}
+      <GoogleMapsBottomBar
+        durationMinutes={activeRoute?.durationMinutes || 480}
+        distanceKm={activeRoute?.distanceKm || 550}
+        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Baga Beach, Goa'}
         isRideActive={isRideActive}
         onStartRide={handleStartRide}
         onEndRide={handleEndRide}
+        onOpenRoster={() => setIsRosterOpen(true)}
+        onOpenAlerts={() => setIsHazardModalOpen(true)}
+        onHighlightFuel={() => setIsFuelModalOpen(true)}
+        ridersCount={riders.length}
+        currentRiderId={profile.id}
+        callsign={profile.callsign}
+        activeSpeaker={activeSpeaker}
+        channel={voiceChannel}
       />
 
-      {/* Speedometer & Turn-by-Turn Maneuver Cockpit HUD (Top Right) */}
-      <CockpitHUD
-        currentRider={currentRider}
-        packSpreadMeters={packSpreadMeters}
-        nextWaypoint={nextWaypoint}
-        distanceToDestinationKm={distanceToDestinationKm}
-        currentManeuver={activeRoute?.maneuvers ? activeRoute.maneuvers[0] : null}
-        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Baga Beach, Goa'}
-        durationMinutes={activeRoute?.durationMinutes}
+      {/* 1-Tap Hazard Report Modal (Handlebar Safe) */}
+      <HazardReportModal
+        isOpen={isHazardModalOpen}
+        onClose={() => setIsHazardModalOpen(false)}
+        onTriggerAlert={handleTriggerAlert}
       />
 
-      {/* Bottom Center: Tactical Alerts Quick Action Dock */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-        <TacticalAlertsBar
-          alerts={alerts}
-          onTriggerAlert={handleTriggerAlert}
-          onDismissAlert={handleDismissAlert}
-        />
-      </div>
-
-      {/* Right Wing (Handlebar Right Thumb Station): Big Push-To-Talk Button */}
-      <div className="absolute bottom-4 right-4 z-20 pointer-events-none flex flex-col items-end">
-        <PushToTalk
-          currentRiderId={profile.id}
-          callsign={profile.callsign}
-          activeSpeaker={activeSpeaker}
-          channel={voiceChannel}
-          onChangeChannel={setVoiceChannel}
-        />
-      </div>
+      {/* Highway Fuel Stops Modal */}
+      <FuelStopsModal
+        isOpen={isFuelModalOpen}
+        onClose={() => setIsFuelModalOpen(false)}
+        fuelStops={activeRoute?.fuelStops || []}
+        onSelectFuelStop={(_lat, _lng) => {
+          setCameraMode('free');
+        }}
+      />
 
       {/* Discord-style Convoy Roster & Voice Channels Drawer */}
       <ConvoyRoster
