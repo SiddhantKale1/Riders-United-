@@ -1,0 +1,15 @@
+{
+  "name": "riders-united",
+  "version": "1.0.0",
+  "description": "Real-time group motorcycle convoy GPS tracking and PTT voice comms platform",
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"cd backend && npm start\" \"cd frontend && npm run preview\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
