@@ -11,10 +11,10 @@ import {
   FastForward,
   Share2,
   Check,
-  PlusCircle,
-  ShieldAlert
+  PlusCircle
 } from 'lucide-react';
 import { RideChannel, TrackingMode } from '../types';
+import { RouteSearchBox } from './RouteSearchBox';
 
 interface NavbarProps {
   ride: RideChannel | null;
@@ -33,6 +33,9 @@ interface NavbarProps {
   onOpenAlerts: () => void;
   onOpenRideModal: () => void;
   unreadAlertsCount: number;
+  onRouteSelected: (start: { name: string; lat: number; lng: number }, dest: { name: string; lat: number; lng: number }) => void;
+  currentGpsCoords?: { lat: number; lng: number } | null;
+  activeRouteSummary?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -50,7 +53,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenRoster,
   onOpenRoute,
   onOpenRideModal,
-  unreadAlertsCount
+  unreadAlertsCount,
+  onRouteSelected,
+  currentGpsCoords,
+  activeRouteSummary
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -81,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             </div>
             <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 font-mono">
-              <span className="text-amber-400 font-bold">{ride ? ride.code : 'MUM-GOA'}</span>
+              <span className="text-amber-400 font-bold">{ride ? ride.code : 'CONVOY'}</span>
               <span>•</span>
               <span>{ridersCount} Bikes</span>
             </div>
@@ -98,24 +104,31 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Center Capsule: Mode Switcher & Sim Speed (Apple CarPlay Style) */}
-      <div className="pointer-events-auto hidden md:flex items-center space-x-2">
-        <div className="glass-pill rounded-2xl p-1 flex items-center space-x-1">
-          {/* Mode toggle */}
+      {/* Center Capsule: Google Maps Style "Where to?" Search & Mode Switcher */}
+      <div className="pointer-events-auto flex items-center space-x-2">
+        {/* Google Maps Search Bar (Search ANY location / preset worldwide) */}
+        <RouteSearchBox
+          onRouteSelected={onRouteSelected}
+          currentGpsCoords={currentGpsCoords}
+          activeRouteSummary={activeRouteSummary}
+        />
+
+        {/* Mode toggle */}
+        <div className="hidden lg:flex items-center glass-pill rounded-2xl p-1 space-x-1">
           <button
             onClick={() => trackingMode !== 'simulation' && onToggleTrackingMode()}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               trackingMode === 'simulation'
                 ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            NH-66 Sim
+            Sim Mode
           </button>
 
           <button
             onClick={() => trackingMode !== 'device_gps' && onToggleTrackingMode()}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 ${
               trackingMode === 'device_gps'
                 ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
                 : 'text-slate-400 hover:text-slate-200'
@@ -185,10 +198,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenRoute}
             className="p-2 rounded-xl text-slate-300 hover:text-white glass-button flex items-center space-x-1.5"
-            title="Mumbai to Goa Itinerary"
+            title="Route Checkpoints"
           >
             <MapPin className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-semibold hidden lg:inline">Route</span>
+            <span className="text-xs font-semibold hidden xl:inline">Stops</span>
           </button>
 
           {/* Discord-style Roster & Voice Channels */}

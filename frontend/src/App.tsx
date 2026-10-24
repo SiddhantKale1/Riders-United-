@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from './components/Navbar';
 import { MapView } from './components/MapView';
 import { PushToTalk } from './components/PushToTalk';
@@ -16,12 +16,14 @@ import {
   ChatMessage,
   TrackingMode,
   CameraMode,
-  AlertType
+  AlertType,
+  ActiveRoute
 } from './types';
 import { socketService } from './services/socket';
 import { audioEffects } from './services/audioEffects';
 import { convoySimulation } from './services/simulationEngine';
 import { geolocationService } from './services/geolocationService';
+import { routingService } from './services/routingService';
 
 export function App() {
   // Current user's profile
@@ -47,6 +49,11 @@ export function App() {
   const [packSpreadMeters, setPackSpreadMeters] = useState<number>(1420);
   const [alerts, setAlerts] = useState<TacticalAlert[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Dynamic Route Anywhere State (OSRM + Nominatim)
+  const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null);
+  const [customWaypoints, setCustomWaypoints] = useState<Waypoint[]>([]);
+  const [currentGpsCoords, setCurrentGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Controls & Modals
   const [trackingMode, setTrackingMode] = useState<TrackingMode>('simulation');
@@ -77,6 +84,10 @@ export function App() {
       setRiders(state.riders);
       setAlerts(state.alerts);
       setMessages(state.messages);
+      if (state.activeRoute) {
+        setActiveRoute(state.activeRoute);
+        convoySimulation.setCustomPath(state.activeRoute.coordinates, state.activeRoute.distanceKm);
+      }
     });
 
     // Listen to telemetry updates
@@ -88,6 +99,23 @@ export function App() {
 
     socketService.setOnBatchTelemetry((batchRiders) => {
       setRiders(batchRiders);
+    });
+
+    // Listen to route updates from other riders/leader
+    socketService.setOnRouteSet((newRoute: ActiveRoute, msg?: string) => {
+      setActiveRoute(newRoute);
+      convoySimulation.setCustomPath(newRoute.coordinates, newRoute.distanceKm);
+      audioEffects.playAlertSound('regroup');
+      if (msg) {
+        addChatMessage({
+          id: `route-${Date.now()}`,
+          senderId: 'system',
+          senderName: 'Convoy Navigation',
+          text: msg,
+          timestamp: Date.now(),
+          type: 'system'
+        });
+      }
     });
 
     // Listen to alerts
@@ -149,7 +177,7 @@ export function App() {
     // Attempt to join default ride MUM-GOA
     socketService.joinRide('MUM-GOA', profile);
 
-    // Fetch initial HTTP snapshot if needed
+    // Fetch initial HTTP snapshot
     fetch('http://localhost:5001/api/rides/MUM-GOA')
       .then((res) => res.json())
       .then((data) => {
@@ -158,10 +186,13 @@ export function App() {
           setRiders(data.riders);
           setAlerts(data.alerts || []);
           setMessages(data.messages || []);
+          if (data.activeRoute) {
+            setActiveRoute(data.activeRoute);
+            convoySimulation.setCustomPath(data.activeRoute.coordinates, data.activeRoute.distanceKm);
+          }
         }
       })
       .catch(() => {
-        // In case backend is just spinning up, initialize simulation directly
         const initialSimRiders = convoySimulation.getRiders();
         setRiders(initialSimRiders);
       });
@@ -173,7 +204,6 @@ export function App() {
       if (trackingMode === 'simulation') {
         setRiders(simRiders);
         setPackSpreadMeters(spread);
-        // Optionally stream simulation updates over socket to any other connected browser
         socketService.sendBatchTelemetry(simRiders);
       }
     });
@@ -199,13 +229,15 @@ export function App() {
     };
   }, [trackingMode]);
 
-  // Connect Real Device GPS if selected
+  // Connect Real Device GPS if selected (Works anywhere in the world)
   useEffect(() => {
     if (trackingMode === 'device_gps') {
       convoySimulation.pause();
       setIsSimulating(false);
 
       geolocationService.setOnPositionUpdate((pos) => {
+        setCurrentGpsCoords({ lat: pos.lat, lng: pos.lng });
+
         const updateData: Partial<Rider> = {
           lat: pos.lat,
           lng: pos.lng,
@@ -237,6 +269,59 @@ export function App() {
 
   const addChatMessage = (msg: ChatMessage) => {
     setMessages((prev) => [...prev.slice(-99), msg]);
+  };
+
+  // Dynamic Route Selection Anywhere (Google Maps style)
+  const handleRouteSelected = async (
+    start: { name: string; lat: number; lng: number },
+    dest: { name: string; lat: number; lng: number }
+  ) => {
+    const routeRes = await routingService.calculateRoute([start, dest]);
+    if (!routeRes) {
+      alert('Could not calculate driving route between these points. Please try another destination.');
+      return;
+    }
+
+    const startShort = start.name.split(',')[0];
+    const destShort = dest.name.split(',')[0];
+
+    const newActiveRoute: ActiveRoute = {
+      title: `${startShort} ➔ ${destShort}`,
+      startName: start.name,
+      destName: dest.name,
+      coordinates: routeRes.coordinates,
+      distanceKm: routeRes.distanceKm,
+      durationMinutes: routeRes.durationMinutes,
+      maneuvers: routeRes.maneuvers,
+      summary: routeRes.summary
+    };
+
+    setActiveRoute(newActiveRoute);
+
+    // Dynamic Waypoints for the new route
+    const newWaypoints: Waypoint[] = [
+      { id: 'wp-start', name: `${startShort} (Start)`, lat: start.lat, lng: start.lng, type: 'start' },
+      { id: 'wp-dest', name: `${destShort} (Destination)`, lat: dest.lat, lng: dest.lng, type: 'destination' }
+    ];
+    setCustomWaypoints(newWaypoints);
+
+    // Update simulation engine so all 5 bikes ride along this new route!
+    convoySimulation.setCustomPath(routeRes.coordinates, routeRes.distanceKm);
+
+    // Broadcast to all other riders in room over Socket.IO
+    socketService.sendRouteSet(newActiveRoute);
+
+    // Play route audio chime
+    audioEffects.playAlertSound('regroup');
+
+    addChatMessage({
+      id: `route-${Date.now()}`,
+      senderId: profile.id,
+      senderName: profile.callsign,
+      text: `🏁 New route locked: ${startShort} ➔ ${destShort} (${routeRes.distanceKm} km, ~${Math.floor(routeRes.durationMinutes / 60)}h ${routeRes.durationMinutes % 60}m)`,
+      timestamp: Date.now(),
+      type: 'system'
+    });
   };
 
   // Toggle Tracking Mode (Live GPS vs Sim)
@@ -356,23 +441,24 @@ export function App() {
       });
   };
 
-  // Focus on specific rider or waypoint
-  const handleFocusRider = (riderId: string) => {
-    const target = riders.find((r) => r.id === riderId);
-    if (target) {
-      setCameraMode('free');
-    }
+  const handleFocusRider = (_riderId: string) => {
+    setCameraMode('free');
   };
 
   const currentRider = useMemo(() => {
     return riders.find((r) => r.id === profile.id) || riders[0] || null;
   }, [riders, profile.id]);
 
-  const activeWaypoints = ride ? ride.route : [];
-  const nextWaypoint = activeWaypoints.length > 6 ? activeWaypoints[6] : null;
+  const activeWaypoints = customWaypoints.length > 0
+    ? customWaypoints
+    : (ride ? ride.route : []);
+
+  const nextWaypoint = activeWaypoints.length > 1 ? activeWaypoints[1] : null;
+
+  const totalTripKm = activeRoute ? activeRoute.distanceKm : 550;
   const distanceToDestinationKm = currentRider
-    ? Math.max(0, Math.round(550 - (currentRider.distanceCoveredKm || 142)))
-    : 408;
+    ? Math.max(0, Math.round(totalTripKm - (currentRider.distanceCoveredKm || 0)))
+    : totalTripKm;
 
   const isLeader = profile.role === 'leader' || (ride && ride.leaderId === profile.id);
 
@@ -387,13 +473,14 @@ export function App() {
           currentRiderId={profile.id}
           cameraMode={cameraMode}
           onSetCameraMode={setCameraMode}
+          activeRoutePath={activeRoute?.coordinates}
           onMapClickReportAlert={(lat, lng) => {
             handleTriggerAlert('hazard', 'Reported Hazard Pin', `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
           }}
         />
       </div>
 
-      {/* Floating Modern CarPlay Style Top Island */}
+      {/* Floating Modern CarPlay Style Top Island with Route Search Anywhere */}
       <Navbar
         ride={ride}
         trackingMode={trackingMode}
@@ -411,14 +498,20 @@ export function App() {
         onOpenAlerts={() => setIsRosterOpen(true)}
         onOpenRideModal={() => setIsRideModalOpen(true)}
         unreadAlertsCount={alerts.filter((a) => a.active).length}
+        onRouteSelected={handleRouteSelected}
+        currentGpsCoords={currentGpsCoords}
+        activeRouteSummary={activeRoute?.title}
       />
 
-      {/* Speedometer & Convoy Spread Cockpit Card (Top Right) */}
+      {/* Speedometer & Turn-by-Turn Maneuver Cockpit HUD (Top Right) */}
       <CockpitHUD
         currentRider={currentRider}
         packSpreadMeters={packSpreadMeters}
         nextWaypoint={nextWaypoint}
         distanceToDestinationKm={distanceToDestinationKm}
+        currentManeuver={activeRoute?.maneuvers ? activeRoute.maneuvers[0] : null}
+        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Baga Beach, Goa'}
+        durationMinutes={activeRoute?.durationMinutes}
       />
 
       {/* Tactical Alerts Bar & Big PTT Thumb Button (Bottom Center Dock) */}
@@ -452,12 +545,12 @@ export function App() {
         onTriggerRegroup={handleTriggerRegroup}
       />
 
-      {/* Mumbai to Goa Route Schedule Modal */}
+      {/* Route Schedule / Waypoints Modal */}
       <RouteScheduleModal
         isOpen={isRouteOpen}
         onClose={() => setIsRouteOpen(false)}
         waypoints={activeWaypoints}
-        onSelectWaypoint={(wp) => {
+        onSelectWaypoint={(_wp) => {
           setCameraMode('free');
         }}
         onJumpSimulation={(fraction) => {

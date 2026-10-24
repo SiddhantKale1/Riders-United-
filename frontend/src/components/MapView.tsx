@@ -14,6 +14,7 @@ interface MapViewProps {
   cameraMode: CameraMode;
   onSetCameraMode: (mode: CameraMode) => void;
   onMapClickReportAlert?: (lat: number, lng: number) => void;
+  activeRoutePath?: [number, number][];
 }
 
 const TILE_LAYERS: Record<MapTheme, { url: string; subdomains?: string; maxZoom: number; attribution: string }> = {
@@ -46,7 +47,8 @@ export const MapView: React.FC<MapViewProps> = ({
   currentRiderId,
   cameraMode,
   onSetCameraMode,
-  onMapClickReportAlert
+  onMapClickReportAlert,
+  activeRoutePath
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -58,6 +60,10 @@ export const MapView: React.FC<MapViewProps> = ({
   const glowPolylineRef = useRef<L.Polyline | null>(null);
 
   const [mapTheme, setMapTheme] = useState<MapTheme>('voyager'); // Default to clean Voyager daylight navigation
+
+  const pathCoordinates = activeRoutePath && activeRoutePath.length > 1
+    ? activeRoutePath
+    : MUMBAI_GOA_DETAILED_PATH;
 
   // Initialize Map
   useEffect(() => {
@@ -142,7 +148,7 @@ export const MapView: React.FC<MapViewProps> = ({
     const glowColor = mapTheme === 'voyager' ? '#60a5fa' : '#0284c7';
     const coreColor = mapTheme === 'voyager' ? '#2563eb' : '#38bdf8';
 
-    const glowLine = L.polyline(MUMBAI_GOA_DETAILED_PATH, {
+    const glowLine = L.polyline(pathCoordinates, {
       color: glowColor,
       weight: 8,
       opacity: 0.35,
@@ -150,7 +156,7 @@ export const MapView: React.FC<MapViewProps> = ({
       lineJoin: 'round'
     }).addTo(map);
 
-    const mainLine = L.polyline(MUMBAI_GOA_DETAILED_PATH, {
+    const mainLine = L.polyline(pathCoordinates, {
       color: coreColor,
       weight: 4,
       opacity: 0.9,
@@ -161,11 +167,17 @@ export const MapView: React.FC<MapViewProps> = ({
     glowPolylineRef.current = glowLine;
     routePolylineRef.current = mainLine;
 
+    // If new custom route selected, fit bounds to show the entire route
+    if (activeRoutePath && activeRoutePath.length > 1) {
+      const bounds = L.latLngBounds(activeRoutePath);
+      map.fitBounds(bounds, { padding: [80, 80], animate: true });
+    }
+
     return () => {
       map.removeLayer(glowLine);
       map.removeLayer(mainLine);
     };
-  }, [mapTheme]);
+  }, [mapTheme, activeRoutePath]);
 
   // Update Waypoint Markers
   useEffect(() => {

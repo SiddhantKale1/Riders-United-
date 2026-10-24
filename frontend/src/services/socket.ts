@@ -20,6 +20,7 @@ class SocketService {
   private onRoleChangedCallback: ((data: { riderId: string; newRole: string; ride: RideChannel; message: string }) => void) | null = null;
   private onVoiceIncomingStartCallback: ((data: { riderId: string; callsign: string; channel: string }) => void) | null = null;
   private onVoiceIncomingStopCallback: ((data: { riderId: string; callsign: string; channel: string }) => void) | null = null;
+  private onRouteSetCallback: ((route: any, message?: string) => void) | null = null;
   private onConnectionStatusChange: ((status: boolean) => void) | null = null;
 
   public init() {
@@ -95,6 +96,14 @@ class SocketService {
       audioEffects.playRogerBeep();
       if (this.onVoiceIncomingStopCallback) this.onVoiceIncomingStopCallback(data);
     });
+
+    this.socket.on('route:set_broadcast', ({ activeRoute, message }) => {
+      if (this.onRouteSetCallback) this.onRouteSetCallback(activeRoute, message);
+    });
+  }
+
+  public sendRouteSet(routeData: any) {
+    this.emit('route:set', routeData);
   }
 
   public joinRide(code: string, rider: Partial<Rider>) {
@@ -146,6 +155,7 @@ class SocketService {
   public setOnRoleChanged(cb: (data: any) => void) { this.onRoleChangedCallback = cb; }
   public setOnVoiceIncomingStart(cb: (data: any) => void) { this.onVoiceIncomingStartCallback = cb; }
   public setOnVoiceIncomingStop(cb: (data: any) => void) { this.onVoiceIncomingStopCallback = cb; }
+  public setOnRouteSet(cb: (route: any, message?: string) => void) { this.onRouteSetCallback = cb; }
   public setOnConnectionStatusChange(cb: (status: boolean) => void) { this.onConnectionStatusChange = cb; }
 }
 

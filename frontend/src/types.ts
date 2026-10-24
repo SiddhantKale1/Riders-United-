@@ -57,6 +57,25 @@ export interface ChatMessage {
   type: 'chat' | 'system' | 'radio_transcript' | 'alert';
 }
 
+export interface RouteManeuver {
+  type: string;
+  modifier?: string;
+  instruction: string;
+  distanceMeters: number;
+  durationSeconds: number;
+}
+
+export interface ActiveRoute {
+  title: string;
+  startName: string;
+  destName: string;
+  coordinates: [number, number][];
+  distanceKm: number;
+  durationMinutes: number;
+  maneuvers: RouteManeuver[];
+  summary?: string;
+}
+
 export interface RideChannel {
   id: string;
   code: string;
@@ -70,6 +89,7 @@ export interface RideChannel {
   riders: Rider[];
   alerts: TacticalAlert[];
   messages: ChatMessage[];
+  activeRoute?: ActiveRoute;
 }
 
 export type TrackingMode = 'simulation' | 'device_gps';

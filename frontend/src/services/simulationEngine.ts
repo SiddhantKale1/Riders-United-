@@ -64,11 +64,30 @@ const RADIO_CHATTER_SCRIPTS = [
 export class ConvoySimulationEngine {
   private isRunning: boolean = false;
   private speedMultiplier: number = 1;
-  private currentProgress: number = 0.35; // Start around Mangaon (35% into the trip)
+  private currentProgress: number = 0.35; // Default progress along current route
   private timerId: any = null;
   private radioTimerId: any = null;
   private onUpdateCallback: ((riders: Rider[], spreadMeters: number) => void) | null = null;
   private onRadioChatterCallback: ((msg: { senderId: string; text: string; role: string }) => void) | null = null;
+  private activePath: [number, number][] = MUMBAI_GOA_DETAILED_PATH;
+  private totalRouteKm: number = 550;
+
+  // Set any custom highway road path anywhere in the world dynamically
+  public setCustomPath(newPath: [number, number][], totalKm: number = 100) {
+    if (!newPath || newPath.length < 2) return;
+    this.activePath = newPath;
+    this.totalRouteKm = totalKm;
+    this.currentProgress = 0.02; // Start near beginning of new route
+    this.tick();
+  }
+
+  public getActivePath(): [number, number][] {
+    return this.activePath;
+  }
+
+  public getTotalRouteKm(): number {
+    return this.totalRouteKm;
+  }
 
   // Initial 5 riders state
   private riders: Rider[] = [
@@ -226,15 +245,15 @@ export class ConvoySimulationEngine {
     this.tick();
   }
 
-  // Calculate point along polyline
+  // Calculate point along active polyline
   private getPointAtProgress(t: number): { lat: number; lng: number; heading: number } {
-    const totalSegments = MUMBAI_GOA_DETAILED_PATH.length - 1;
+    const totalSegments = this.activePath.length - 1;
     const scaled = t * totalSegments;
     const index = Math.floor(scaled);
     const fraction = scaled - index;
 
-    const p1 = MUMBAI_GOA_DETAILED_PATH[Math.min(index, totalSegments)];
-    const p2 = MUMBAI_GOA_DETAILED_PATH[Math.min(index + 1, totalSegments)];
+    const p1 = this.activePath[Math.min(index, totalSegments)];
+    const p2 = this.activePath[Math.min(index + 1, totalSegments)];
 
     const lat = p1[0] + (p2[0] - p1[0]) * fraction;
     const lng = p1[1] + (p2[1] - p1[1]) * fraction;
@@ -291,7 +310,7 @@ export class ConvoySimulationEngine {
       rider.speed = currentSpeed;
       rider.battery = battery;
       rider.lastPing = Date.now();
-      rider.distanceCoveredKm = Math.round(this.currentProgress * 550 * 10) / 10;
+      rider.distanceCoveredKm = Math.round(this.currentProgress * this.totalRouteKm * 10) / 10;
 
       if (rider.role === 'leader') {
         leaderPos = { lat: rider.lat, lng: rider.lng };

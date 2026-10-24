@@ -555,6 +555,19 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Set full custom route anywhere in the world
+  socket.on('route:set', (routeData) => {
+    if (!currentRideCode) return;
+    const ride = rides.get(currentRideCode);
+    if (!ride) return;
+
+    ride.activeRoute = routeData;
+    io.to(currentRideCode).emit('route:set_broadcast', {
+      activeRoute: routeData,
+      message: `Convoy route updated: ${routeData.title || 'Custom Route'}`
+    });
+  });
+
   // Disconnect
   socket.on('disconnect', () => {
     if (currentRideCode && currentRiderId) {
