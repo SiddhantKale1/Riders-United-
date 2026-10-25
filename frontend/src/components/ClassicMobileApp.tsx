@@ -19,7 +19,6 @@ import {
   Gauge,
   MapPin,
   Sparkles,
-  Shield,
   Wifi,
   History,
   LogOut,
@@ -549,26 +548,6 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                   </>
                 )}
               </button>
-
-              {/* Feature Highlights Grid */}
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono font-bold">
-                <div className="p-2 rounded-lg bg-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center space-x-1.5">
-                  <Navigation className="w-3.5 h-3.5 text-[#2563eb] shrink-0" />
-                  <span className="truncate">Satellite Only</span>
-                </div>
-                <div className="p-2 rounded-lg bg-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center space-x-1.5">
-                  <Gauge className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span className="truncate">GPS Speedometer</span>
-                </div>
-                <div className="p-2 rounded-lg bg-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center space-x-1.5">
-                  <Fuel className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="truncate">Corridor Fuel</span>
-                </div>
-                <div className="p-2 rounded-lg bg-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center space-x-1.5">
-                  <Shield className="w-3.5 h-3.5 text-[#ef4444] shrink-0" />
-                  <span className="truncate">Zero Fake Bots</span>
-                </div>
-              </div>
             </div>
           )}
 
@@ -712,25 +691,6 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                   </button>
                 </form>
               )}
-
-              {/* Squad Protocol Checklist */}
-              <div className="bg-white border-2 border-black shadow-[2px_2px_0px_#000] rounded-xl p-3 space-y-1.5 text-[10px] font-mono font-bold">
-                <div className="text-[10px] font-black uppercase text-black mb-1">
-                  Tactical Convoy Features:
-                </div>
-                <div className="flex items-center space-x-2 text-slate-700">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Real-time GPS telemetry for every squad member</span>
-                </div>
-                <div className="flex items-center space-x-2 text-slate-700">
-                  <Check className="w-3.5 h-3.5 text-[#2563eb] shrink-0" />
-                  <span>Low-latency Tactical PTT Voice Comms</span>
-                </div>
-                <div className="flex items-center space-x-2 text-slate-700">
-                  <Check className="w-3.5 h-3.5 text-[#ef4444] shrink-0" />
-                  <span>Strictly 100% Real Riders (Zero Simulated Bots)</span>
-                </div>
-              </div>
             </div>
           )}
 
