@@ -119,7 +119,7 @@ export const StagingLobby: React.FC<StagingLobbyProps> = ({
 
   const inviteUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?code=${ride.code}`
-    : `http://192.168.29.64:5001/?code=${ride.code}`;
+    : `/?code=${ride.code}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(inviteUrl);

@@ -17,5 +17,5 @@ export const getApiBaseUrl = (): string => {
 
   // Native Capacitor fallback on iPhone / Android:
   const customIp = typeof localStorage !== 'undefined' ? localStorage.getItem('riders_backend_ip') : null;
-  return customIp || 'http://192.168.29.187:5001';
+  return customIp || 'http://localhost:5001';
 };
