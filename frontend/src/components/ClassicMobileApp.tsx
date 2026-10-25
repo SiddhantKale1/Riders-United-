@@ -313,38 +313,16 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {/* 1. PERSISTENT TOP APP BAR                                             */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
-        <header className="px-3.5 py-2.5 border-b-2 border-black bg-white flex items-center justify-between shrink-0 shadow-[0_2px_0px_#000] z-20">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-[#ef4444] text-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center font-black">
-              <Bike className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className="text-xs font-black uppercase tracking-wider text-black leading-none">
-                Riders United
-              </h1>
-              <span className="text-[9px] text-[#2563eb] font-mono font-bold leading-none">
-                100% Real GPS • Zero Bots
-              </span>
-            </div>
+        <header className="px-3.5 py-3 border-b-2 border-black bg-white relative flex items-center justify-center shrink-0 shadow-[0_2px_0px_#000] z-20 min-h-[48px]">
+          {/* Centered App Title with Red Underline Border */}
+          <div className="flex items-center justify-center">
+            <h1 className="text-xs font-black uppercase tracking-wider text-black border-b-2 border-[#ef4444] pb-0.5 leading-none">
+              Riders United
+            </h1>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* Live GPS Status Pill */}
-            <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 border border-black text-[9px] font-black uppercase shadow-[1px_1px_0px_#000]">
-              {isConnected ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-black">LIVE</span>
-                </>
-              ) : (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
-                  <span className="text-[#ef4444]">SYNCING</span>
-                </>
-              )}
-            </div>
-
-            {/* Rider Identity Pill (Tap jumps to Garage tab) */}
+          {/* Rider Identity Pill (Anchored to Right) */}
+          <div className="absolute right-3.5 flex items-center">
             <button
               type="button"
               onClick={() => setActiveTab('garage')}
