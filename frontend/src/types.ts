@@ -95,3 +95,27 @@ export interface RideChannel {
 
 export type TrackingMode = 'simulation' | 'device_gps';
 export type CameraMode = 'convoy' | 'leader' | 'me' | 'free';
+
+export interface CompletedRide {
+  id: string;
+  routeTitle: string;
+  startName: string;
+  destName: string;
+  distanceKm: number;
+  durationMinutes: number;
+  avgSpeedKmh: number;
+  completedAt: number;
+  mode: 'solo' | 'convoy';
+  code?: string | null;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  callsign: string;
+  bikeModel: string;
+  avatarColor: string;
+  picture?: string;
+  provider: 'local' | 'google' | 'guest';
+}

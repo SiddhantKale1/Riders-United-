@@ -9,6 +9,8 @@ import { GoogleMapsBottomBar } from './components/GoogleMapsBottomBar';
 import { FuelStopsModal } from './components/FuelStopsModal';
 import { ConvoyRoster } from './components/ConvoyRoster';
 import { CreateJoinModal } from './components/CreateJoinModal';
+import { RideCompletionModal, ExitConfirmModal } from './components/RideCompletionModal';
+import { AuthModal } from './components/AuthModal';
 import {
   RideChannel,
   Rider,
@@ -19,7 +21,9 @@ import {
   TrackingMode,
   CameraMode,
   AlertType,
-  ActiveRoute
+  ActiveRoute,
+  CompletedRide,
+  AuthUser
 } from './types';
 import { socketService } from './services/socket';
 import { audioEffects } from './services/audioEffects';
@@ -41,6 +45,46 @@ export function App() {
   });
   const [screen, setScreen] = useState<AppScreen>('mobile');
   const [isConnected, setIsConnected] = useState<boolean>(false);
+
+  // User Authentication & Database Session
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('riders_auth_user');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  // Ride History (Persisted in SQLite database + LocalStorage)
+  const [rideHistory, setRideHistory] = useState<CompletedRide[]>(() => {
+    try {
+      const saved = localStorage.getItem('riders_ride_history');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  // Navigation Timing & In-App Completion Modals
+  const [rideStartTime, setRideStartTime] = useState<number | null>(null);
+  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState<boolean>(false);
+  const [completedRideData, setCompletedRideData] = useState<CompletedRide | null>(null);
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState<boolean>(false);
+
+  // Sync ride history from database for logged in user
+  useEffect(() => {
+    if (authUser?.id) {
+      fetch(`${getApiBaseUrl()}/api/rides/history?userId=${authUser.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && Array.isArray(data.history)) {
+            setRideHistory(data.history);
+            localStorage.setItem('riders_ride_history', JSON.stringify(data.history));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [authUser?.id]);
 
   // User Profile with LocalStorage Persistence
   const [profile, setProfile] = useState<{
@@ -219,12 +263,10 @@ export function App() {
       }
     });
 
-    // Ride completed / ended
-    socketService.setOnRideEnded(({ ride: endedRide, message }) => {
+    // Ride completed / ended via broadcast
+    socketService.setOnRideEnded(({ ride: endedRide }) => {
       setRide(endedRide);
-      setIsRideActive(false);
-      setScreen('mobile');
-      alert(message || 'The ride has ended. Returning to main menu.');
+      recordCompletedRide(endedRide);
     });
 
     // Route updated by leader
@@ -544,6 +586,7 @@ export function App() {
       messages: []
     };
 
+    setRideStartTime(Date.now());
     setRide(soloRide);
     setRiders([soloRider]);
     setIsRideActive(true);
@@ -624,20 +667,108 @@ export function App() {
       alert('Without putting a destination location, you cannot start the ride. Please set a destination first!');
       return;
     }
+    setRideStartTime(Date.now());
     socketService.startConvoyRide();
     setIsRideActive(true);
     setScreen('cockpit');
   };
 
-  // Exit Cockpit / End Navigation
-  const handleEndRide = () => {
-    if (confirm('Are you sure you want to exit navigation and return to the main lobby?')) {
-      if (ride && ride.leaderId === profile.id && ride.code !== 'SOLO') {
-        socketService.endConvoyRide();
-      }
-      setIsRideActive(false);
-      setScreen('mobile');
+  // User Authentication Handlers
+  const handleAuthSuccess = (user: AuthUser) => {
+    setAuthUser(user);
+    setProfile((prev) => ({
+      ...prev,
+      name: user.name || prev.name,
+      callsign: user.callsign || prev.callsign,
+      bikeModel: user.bikeModel || prev.bikeModel,
+      avatarColor: user.avatarColor || prev.avatarColor
+    }));
+
+    // Fetch user's saved ride history from SQLite database
+    fetch(`${getApiBaseUrl()}/api/rides/history?userId=${user.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.history)) {
+          setRideHistory(data.history);
+          localStorage.setItem('riders_ride_history', JSON.stringify(data.history));
+        }
+      })
+      .catch(() => {});
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('riders_auth_user');
+    localStorage.removeItem('riders_auth_token');
+    setAuthUser(null);
+  };
+
+  const handleClearHistory = () => {
+    if (authUser?.id) {
+      fetch(`${getApiBaseUrl()}/api/rides/history?userId=${authUser.id}`, { method: 'DELETE' }).catch(() => {});
     }
+    localStorage.removeItem('riders_ride_history');
+    setRideHistory([]);
+  };
+
+  // Complete and record ride metrics to database and local state
+  const recordCompletedRide = (endedRide?: RideChannel | null) => {
+    const durationMinutes = rideStartTime
+      ? Math.max(1, Math.round((Date.now() - rideStartTime) / 60000))
+      : (activeRoute?.durationMinutes || 15);
+
+    const distanceKm = activeRoute?.distanceKm
+      ? Number(activeRoute.distanceKm.toFixed(1))
+      : (currentRider?.distanceCoveredKm ? Number(currentRider.distanceCoveredKm.toFixed(1)) : 10.0);
+
+    const avgSpeed = durationMinutes > 0
+      ? Math.round((distanceKm / (durationMinutes / 60)))
+      : (ride?.targetSpeed || 55);
+
+    const completedRide: CompletedRide = {
+      id: `hist-${Date.now()}`,
+      routeTitle: activeRoute?.title || `${activeRoute?.startName || 'Start'} ➔ ${activeRoute?.destName || 'Destination'}`,
+      startName: activeRoute?.startName || 'My Current Location',
+      destName: activeRoute?.destName || 'Destination',
+      distanceKm,
+      durationMinutes,
+      avgSpeedKmh: avgSpeed > 0 && avgSpeed < 200 ? avgSpeed : (ride?.targetSpeed || 55),
+      completedAt: Date.now(),
+      mode: (ride?.code === 'SOLO' || !ride) ? 'solo' : 'convoy',
+      code: endedRide?.code || ride?.code || null
+    };
+
+    // Save to local state and localStorage
+    setRideHistory((prev) => {
+      const updated = [completedRide, ...prev];
+      localStorage.setItem('riders_ride_history', JSON.stringify(updated));
+      return updated;
+    });
+
+    // Save to SQLite database
+    fetch(`${getApiBaseUrl()}/api/rides/history`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: authUser?.id || null, ride: completedRide })
+    }).catch(() => {});
+
+    setCompletedRideData(completedRide);
+    setIsCompletionModalOpen(true);
+    setIsRideActive(false);
+    setRideStartTime(null);
+  };
+
+  // Trigger In-App Exit Modal (Replaces browser confirm)
+  const handleEndRide = () => {
+    setIsExitConfirmOpen(true);
+  };
+
+  // Confirm In-App Exit Navigation
+  const handleConfirmEndRide = () => {
+    setIsExitConfirmOpen(false);
+    if (ride && ride.leaderId === profile.id && ride.code !== 'SOLO') {
+      socketService.endConvoyRide();
+    }
+    recordCompletedRide(ride);
   };
 
   const handleLeaveLobby = () => {
@@ -718,32 +849,74 @@ export function App() {
   // 1. Classic Mobile App Shell (Persistent Top App Bar, Scrollable View & Bottom Tab Bar)
   if (screen === 'mobile') {
     return (
-      <ClassicMobileApp
-        currentProfile={profile}
-        onUpdateProfile={handleUpdateProfile}
-        onCreateGroup={handleCreateGroup}
-        onJoinGroup={handleJoinGroup}
-        onStartSoloRide={handleStartSoloRide}
-        isConnected={isConnected}
-        initialTab={mobileTab}
-        initialCode={initialUrlCode}
-        currentGpsCoords={currentGpsCoords}
-      />
+      <>
+        <ClassicMobileApp
+          currentProfile={profile}
+          onUpdateProfile={handleUpdateProfile}
+          onCreateGroup={handleCreateGroup}
+          onJoinGroup={handleJoinGroup}
+          onStartSoloRide={handleStartSoloRide}
+          isConnected={isConnected}
+          initialTab={mobileTab}
+          initialCode={initialUrlCode}
+          currentGpsCoords={currentGpsCoords}
+          authUser={authUser}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onSignOut={handleSignOut}
+          rideHistory={rideHistory}
+          onClearHistory={handleClearHistory}
+        />
+
+        {/* In-App Ride Completed & Congratulations Modal */}
+        <RideCompletionModal
+          isOpen={isCompletionModalOpen}
+          rideData={completedRideData}
+          onClose={() => setIsCompletionModalOpen(false)}
+          onViewHistory={() => {
+            setIsCompletionModalOpen(false);
+            setMobileTab('garage');
+          }}
+        />
+
+        {/* Database Rider Authentication Modal */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+      </>
     );
   }
 
   // 2. Staging Lobby (Pre-ride Group Staging)
   if (screen === 'lobby' && ride) {
     return (
-      <StagingLobby
-        ride={ride}
-        currentRiderId={profile.id}
-        isLeader={Boolean(isLeader)}
-        onStartRide={handleStartConvoyRide}
-        onLeaveRide={handleLeaveLobby}
-        onRouteSelected={handleRouteSelected}
-        currentGpsCoords={currentGpsCoords}
-      />
+      <>
+        <StagingLobby
+          ride={ride}
+          currentRiderId={profile.id}
+          isLeader={Boolean(isLeader)}
+          onStartRide={handleStartConvoyRide}
+          onLeaveRide={handleLeaveLobby}
+          onRouteSelected={handleRouteSelected}
+          currentGpsCoords={currentGpsCoords}
+        />
+
+        {/* In-App Ride Completed Modal if broadcasted */}
+        <RideCompletionModal
+          isOpen={isCompletionModalOpen}
+          rideData={completedRideData}
+          onClose={() => {
+            setIsCompletionModalOpen(false);
+            setScreen('mobile');
+          }}
+          onViewHistory={() => {
+            setIsCompletionModalOpen(false);
+            setMobileTab('garage');
+            setScreen('mobile');
+          }}
+        />
+      </>
     );
   }
 
@@ -850,6 +1023,28 @@ export function App() {
         onCreateRide={(rideData) => handleCreateGroup(rideData.title, rideData.targetSpeed)}
         currentProfile={profile}
         onUpdateProfile={handleUpdateProfile}
+      />
+
+      {/* In-App Exit Confirmation Modal (Replaces browser confirm) */}
+      <ExitConfirmModal
+        isOpen={isExitConfirmOpen}
+        onCancel={() => setIsExitConfirmOpen(false)}
+        onConfirm={handleConfirmEndRide}
+      />
+
+      {/* In-App Ride Completed & Congratulations Modal (Replaces browser alert) */}
+      <RideCompletionModal
+        isOpen={isCompletionModalOpen}
+        rideData={completedRideData}
+        onClose={() => {
+          setIsCompletionModalOpen(false);
+          setScreen('mobile');
+        }}
+        onViewHistory={() => {
+          setIsCompletionModalOpen(false);
+          setMobileTab('garage');
+          setScreen('mobile');
+        }}
       />
     </div>
   );

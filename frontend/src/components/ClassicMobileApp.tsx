@@ -20,9 +20,13 @@ import {
   MapPin,
   Sparkles,
   Shield,
-  Wifi
+  Wifi,
+  History,
+  LogOut,
+  Award,
+  Clock
 } from 'lucide-react';
-import { RiderRole, ActiveRoute } from '../types';
+import { RiderRole, ActiveRoute, CompletedRide, AuthUser } from '../types';
 import { routingService, LocationSearchResult, FuelStop } from '../services/routingService';
 
 export type MobileTab = 'ride' | 'squad' | 'fuel' | 'garage';
@@ -47,6 +51,11 @@ interface ClassicMobileAppProps {
   initialTab?: MobileTab;
   initialCode?: string;
   currentGpsCoords?: { lat: number; lng: number } | null;
+  authUser?: AuthUser | null;
+  onOpenAuth?: () => void;
+  onSignOut?: () => void;
+  rideHistory?: CompletedRide[];
+  onClearHistory?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -74,7 +83,12 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
   isConnected,
   initialTab = 'ride',
   initialCode = '',
-  currentGpsCoords
+  currentGpsCoords,
+  authUser = null,
+  onOpenAuth,
+  onSignOut,
+  rideHistory = [],
+  onClearHistory
 }) => {
   // Active Bottom Navigation Tab
   const [activeTab, setActiveTab] = useState<MobileTab>(initialTab);
@@ -324,7 +338,18 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
           </div>
 
           {/* Rider Identity Pill (Anchored to Right) */}
-          <div className="absolute right-3.5 flex items-center">
+          <div className="absolute right-3.5 flex items-center space-x-1.5">
+            {!authUser && onOpenAuth && (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="px-2 py-1 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white border-2 border-black text-[9px] font-black uppercase shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+                title="Sign in or Register"
+              >
+                Sign In
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setActiveTab('garage')}
@@ -793,7 +818,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
           {/* ───────────────────────────────────────────────────────────────── */}
           {activeTab === 'garage' && (
             <div className="space-y-3 animate-fadeIn">
-              {/* Garage Header */}
+              {/* Rider Garage & Identity Header */}
               <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3 flex items-center justify-between">
                 <div>
                   <div className="flex items-center space-x-1 text-[10px] font-black text-black uppercase tracking-wider">
@@ -812,6 +837,125 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                   style={{ backgroundColor: profileColor }}
                 >
                   <Bike className="w-5 h-5 text-white" />
+                </div>
+              </div>
+
+              {/* Rider Account & Cloud Sync Card */}
+              {authUser ? (
+                <div className="bg-white border-2 border-black shadow-[2px_2px_0px_#000] rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5 truncate">
+                    {authUser.picture ? (
+                      <img src={authUser.picture} alt="" className="w-8 h-8 rounded-full border border-black shrink-0" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[#2563eb] text-white flex items-center justify-center font-black text-xs shrink-0">
+                        {authUser.name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="truncate">
+                      <div className="flex items-center space-x-1.5 truncate">
+                        <span className="text-xs font-black text-black truncate">{authUser.name}</span>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-black text-[8px] font-black uppercase">
+                          {authUser.provider === 'google' ? 'Google' : 'Verified'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-mono truncate">{authUser.email}</p>
+                    </div>
+                  </div>
+                  {onSignOut && (
+                    <button
+                      type="button"
+                      onClick={onSignOut}
+                      className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-[#ef4444] border border-black text-[10px] font-black flex items-center space-x-1 shrink-0 transition-colors"
+                      title="Sign Out"
+                    >
+                      <LogOut className="w-3 h-3" />
+                      <span>Sign Out</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gradient-to-r from-blue-50 to-slate-50 border-2 border-black shadow-[2.5px_2.5px_0px_#000] rounded-xl p-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-[#2563eb] block">Rider Account</span>
+                    <h4 className="text-xs font-black text-black">Sign In / Register</h4>
+                    <p className="text-[10px] text-slate-600 font-bold">Save your runs in the database</p>
+                  </div>
+                  {onOpenAuth && (
+                    <button
+                      type="button"
+                      onClick={onOpenAuth}
+                      className="px-3 py-1.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white border-2 border-black font-black text-xs uppercase shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1.5 shrink-0 transition-all"
+                    >
+                      <User className="w-3.5 h-3.5 text-white" />
+                      <span>Sign In</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Ride History Section */}
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between pb-1.5 border-b border-black">
+                  <div className="flex items-center space-x-1.5 text-xs font-black uppercase tracking-wide">
+                    <History className="w-4 h-4 text-[#2563eb]" />
+                    <span>Ride History</span>
+                  </div>
+                  {rideHistory && rideHistory.length > 0 && onClearHistory && (
+                    <button
+                      type="button"
+                      onClick={onClearHistory}
+                      className="text-[9px] font-mono font-bold text-slate-500 hover:text-[#ef4444] uppercase"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Lifetime Stats Summary */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-slate-50 border border-black rounded-lg p-2">
+                    <div className="text-base font-black text-black leading-none">{rideHistory.length}</div>
+                    <div className="text-[8px] font-mono font-black uppercase text-slate-500 mt-1">Rides Completed</div>
+                  </div>
+                  <div className="bg-slate-50 border border-black rounded-lg p-2">
+                    <div className="text-base font-black text-black leading-none">
+                      {rideHistory.reduce((acc, r) => acc + (r.distanceKm || 0), 0).toFixed(1)}
+                    </div>
+                    <div className="text-[8px] font-mono font-black uppercase text-slate-500 mt-1">Total Km</div>
+                  </div>
+                  <div className="bg-slate-50 border border-black rounded-lg p-2">
+                    <div className="text-base font-black text-black leading-none">
+                      {(rideHistory.reduce((acc, r) => acc + (r.durationMinutes || 0), 0) / 60).toFixed(1)}h
+                    </div>
+                    <div className="text-[8px] font-mono font-black uppercase text-slate-500 mt-1">Saddle Time</div>
+                  </div>
+                </div>
+
+                {/* Completed Rides List */}
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {rideHistory && rideHistory.length > 0 ? (
+                    rideHistory.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-2.5 rounded-lg bg-slate-50 border border-black shadow-[1px_1px_0px_#000] space-y-1"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-black text-black">
+                          <span className="truncate max-w-[170px]">{item.startName} ➔ {item.destName}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-blue-100 text-[#2563eb] text-[8px] font-mono font-bold uppercase shrink-0">
+                            {item.mode}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[9px] font-mono font-bold text-slate-600">
+                          <span>{new Date(item.completedAt).toLocaleDateString()}</span>
+                          <span>{item.distanceKm} km • {item.durationMinutes}m • {item.avgSpeedKmh} km/h</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-slate-500 text-[10px] font-bold">
+                      No completed rides recorded yet. Start navigation to record your first run!
+                    </div>
+                  )}
                 </div>
               </div>
 

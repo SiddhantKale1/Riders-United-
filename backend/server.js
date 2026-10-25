@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
+import { dbService } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +29,11 @@ const PORT = process.env.PORT || 5001;
 
 // In-Memory Real Rides Data Store (NO FAKE BOTS)
 const rides = new Map();
+
+// Helper to generate simple auth token
+function generateToken(userId) {
+  return `ru_token_${userId}_${Date.now()}`;
+}
 
 // Helper to serialize ride for JSON output
 function serializeRide(ride) {
@@ -69,6 +76,115 @@ app.get('/api/health', (req, res) => {
     time: new Date().toISOString(),
     totalActiveRides: rides.size
   });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// AUTHENTICATION & USER MANAGEMENT (SQLite DATABASE)
+// ══════════════════════════════════════════════════════════════════════
+
+// Register a new rider account
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, name, callsign, bikeModel, avatarColor } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const existingUser = dbService.findUserByEmail(normalizedEmail);
+  if (existingUser) {
+    return res.status(400).json({ error: 'An account with this email already exists' });
+  }
+
+  const userId = `user-${uuidv4().substring(0, 8)}`;
+  const passwordHash = bcrypt.hashSync(password, 10);
+
+  const newUser = dbService.createUser({
+    id: userId,
+    email: normalizedEmail,
+    passwordHash,
+    name: name?.trim() || 'Rider',
+    callsign: callsign?.trim() || 'Apex',
+    bikeModel: bikeModel?.trim() || 'Motorcycle',
+    avatarColor: avatarColor || '#ef4444'
+  });
+
+  const token = generateToken(userId);
+  res.json({ user: newUser, token });
+});
+
+// Email & Password Rider Login
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = dbService.findUserByEmail(normalizedEmail);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
+  if (!isPasswordValid) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  const token = generateToken(user.id);
+  const userProfile = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    callsign: user.callsign,
+    bikeModel: user.bike_model,
+    avatarColor: user.avatar_color,
+    createdAt: user.created_at
+  };
+
+  res.json({ user: userProfile, token });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// RIDE HISTORY ENDPOINTS (SQLite DATABASE)
+// ══════════════════════════════════════════════════════════════════════
+
+// Save a completed ride to database history
+app.post('/api/rides/history', (req, res) => {
+  const { userId, ride } = req.body;
+  if (!ride) {
+    return res.status(400).json({ error: 'Ride details are required' });
+  }
+
+  const rideId = ride.id || `hist-${uuidv4().substring(0, 8)}`;
+  const completedRide = dbService.saveCompletedRide({
+    id: rideId,
+    userId: userId || null,
+    routeTitle: ride.routeTitle || `${ride.startName || 'Start'} ➔ ${ride.destName || 'Finish'}`,
+    startName: ride.startName || 'Start Point',
+    destName: ride.destName || 'Destination',
+    distanceKm: Number(ride.distanceKm) || 0,
+    durationMinutes: Number(ride.durationMinutes) || 0,
+    avgSpeedKmh: Number(ride.avgSpeedKmh) || 0,
+    mode: ride.mode || 'solo',
+    code: ride.code || null,
+    completedAt: ride.completedAt || Date.now()
+  });
+
+  res.json({ success: true, ride: completedRide });
+});
+
+// Get rider's completed ride history from database
+app.get('/api/rides/history', (req, res) => {
+  const userId = req.query.userId;
+  const history = dbService.getRideHistory(userId || null);
+  res.json({ history });
+});
+
+// Clear rider's completed ride history
+app.delete('/api/rides/history', (req, res) => {
+  const userId = req.query.userId;
+  dbService.clearRideHistory(userId || null);
+  res.json({ success: true });
 });
 
 // List all active public rides
