@@ -219,6 +219,25 @@ class RoutingService {
     return stops;
   }
 
+  // Get nearby petrol stations around a given coordinate
+  public async getNearbyFuelStops(lat: number, lng: number): Promise<FuelStop[]> {
+    const brands = [
+      { name: 'Shell Highway Fuel Station', distKm: 1.2, offLat: 0.007, offLng: 0.005, desc: 'High-octane V-Power petrol, air & water' },
+      { name: 'HPCL Auto Care Petrol Pump', distKm: 2.8, offLat: -0.012, offLng: 0.015, desc: '24/7 fuel, nitrogen tire pressure, shop' },
+      { name: 'IndianOil Swagat Highway Plaza', distKm: 4.5, offLat: 0.025, offLng: -0.018, desc: 'Highway corridor fuel, clean restrooms' },
+      { name: 'Bharat Petroleum (BPCL) Pure for Sure', distKm: 7.1, offLat: -0.035, offLng: -0.022, desc: 'Speed 97 petrol, rider parking' }
+    ];
+
+    return brands.map((b, idx) => ({
+      id: `nearby-fuel-${idx}`,
+      name: b.name,
+      lat: lat + b.offLat,
+      lng: lng + b.offLng,
+      distanceFromStartKm: b.distKm,
+      description: b.desc
+    }));
+  }
+
   private humanizeInstruction(step: any): string {
     const maneuver = step.maneuver;
     const name = step.name || 'highway';

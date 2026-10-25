@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { StartingPage } from './components/StartingPage';
-import { LandingPage } from './components/LandingPage';
+import { ClassicMobileApp, MobileTab } from './components/ClassicMobileApp';
 import { StagingLobby } from './components/StagingLobby';
 import { MapView } from './components/MapView';
 import { GoogleMapsTurnCard } from './components/GoogleMapsTurnCard';
@@ -29,18 +28,18 @@ import { routingService } from './services/routingService';
 import { nativeMobile } from './services/nativeMobile';
 import { getApiBaseUrl } from './services/apiConfig';
 
-export type AppScreen = 'start' | 'plan' | 'lobby' | 'cockpit';
+export type AppScreen = 'mobile' | 'lobby' | 'cockpit';
 
 export function App() {
-  // Screen router: 'start' (Starting Page) | 'plan' (Route Planner) | 'lobby' (Staging Lobby) | 'cockpit'
-  const [plannerTab, setPlannerTab] = useState<'solo' | 'join' | 'create'>('solo');
-  const [screen, setScreen] = useState<AppScreen>(() => {
+  // Classic Mobile App Router: 'mobile' (Bottom Tab App Shell) | 'lobby' (Convoy Squad Staging) | 'cockpit'
+  const [mobileTab, setMobileTab] = useState<MobileTab>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('code')) return 'plan';
+      if (params.get('code')) return 'squad';
     }
-    return 'start';
+    return 'ride';
   });
+  const [screen, setScreen] = useState<AppScreen>('mobile');
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
   // User Profile with LocalStorage Persistence
@@ -224,7 +223,7 @@ export function App() {
     socketService.setOnRideEnded(({ ride: endedRide, message }) => {
       setRide(endedRide);
       setIsRideActive(false);
-      setScreen('start');
+      setScreen('mobile');
       alert(message || 'The ride has ended. Returning to main menu.');
     });
 
@@ -637,14 +636,14 @@ export function App() {
         socketService.endConvoyRide();
       }
       setIsRideActive(false);
-      setScreen('start');
+      setScreen('mobile');
     }
   };
 
   const handleLeaveLobby = () => {
     setRide(null);
     setRiders([]);
-    setScreen('start');
+    setScreen('mobile');
   };
 
   // Toggle Tracking Mode (Live GPS)
@@ -716,33 +715,17 @@ export function App() {
   // RENDER SCREENS
   // ══════════════════════════════════════════════════════════════════════
 
-  // 1. Starting Page (Welcome & Mode Launcher)
-  if (screen === 'start') {
+  // 1. Classic Mobile App Shell (Persistent Top App Bar, Scrollable View & Bottom Tab Bar)
+  if (screen === 'mobile') {
     return (
-      <StartingPage
-        currentProfile={profile}
-        onUpdateProfile={handleUpdateProfile}
-        onSelectMode={(mode) => {
-          setPlannerTab(mode);
-          setScreen('plan');
-        }}
-        isConnected={isConnected}
-      />
-    );
-  }
-
-  // 2. Ride Planner (Solo / Join / Create Route Form)
-  if (screen === 'plan') {
-    return (
-      <LandingPage
+      <ClassicMobileApp
         currentProfile={profile}
         onUpdateProfile={handleUpdateProfile}
         onCreateGroup={handleCreateGroup}
         onJoinGroup={handleJoinGroup}
         onStartSoloRide={handleStartSoloRide}
-        onBackToStart={() => setScreen('start')}
-        initialTab={plannerTab}
         isConnected={isConnected}
+        initialTab={mobileTab}
         initialCode={initialUrlCode}
         currentGpsCoords={currentGpsCoords}
       />
