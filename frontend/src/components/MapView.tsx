@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { Rider, Waypoint, TacticalAlert, CameraMode } from '../types';
-import { MUMBAI_GOA_DETAILED_PATH } from '../services/simulationEngine';
 import { routingService } from '../services/routingService';
 import { Crosshair, Navigation } from 'lucide-react';
 
@@ -65,7 +64,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
   const pathCoordinates = activeRoutePath && activeRoutePath.length > 1
     ? activeRoutePath
-    : MUMBAI_GOA_DETAILED_PATH;
+    : [];
 
   // Initialize Map with Satellite Layer ONLY
   useEffect(() => {

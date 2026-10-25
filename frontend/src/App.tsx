@@ -8,7 +8,6 @@ import { SpeedometerPill } from './components/SpeedometerPill';
 import { GoogleMapsBottomBar } from './components/GoogleMapsBottomBar';
 import { FuelStopsModal } from './components/FuelStopsModal';
 import { ConvoyRoster } from './components/ConvoyRoster';
-import { RouteScheduleModal } from './components/RouteScheduleModal';
 import { CreateJoinModal } from './components/CreateJoinModal';
 import {
   RideChannel,
@@ -101,7 +100,6 @@ export function App() {
   } | null>(null);
 
   const [isRosterOpen, setIsRosterOpen] = useState<boolean>(false);
-  const [_isRouteOpen, setIsRouteOpen] = useState<boolean>(false);
   const [isRideModalOpen, setIsRideModalOpen] = useState<boolean>(false);
   const [isFuelModalOpen, setIsFuelModalOpen] = useState<boolean>(false);
 
@@ -834,14 +832,6 @@ export function App() {
         onAssignRole={handleAssignRole}
         onFocusRider={(_id) => setCameraMode('free')}
         onTriggerRegroup={() => handleTriggerAlert('regroup', 'Convoy Regroup', 'Leader requested immediate pack regroup')}
-      />
-
-      {/* Route Schedule / Waypoints Modal */}
-      <RouteScheduleModal
-        isOpen={_isRouteOpen}
-        onClose={() => setIsRouteOpen(false)}
-        waypoints={activeWaypoints}
-        onSelectWaypoint={(_wp) => setCameraMode('free')}
       />
 
       {/* Profile & Lobby Settings Modal */}
