@@ -247,15 +247,15 @@ export const StagingLobby: React.FC<StagingLobbyProps> = ({
   };
 
   return (
-    <div className="w-full min-h-dvh h-dvh bg-[#050811] flex justify-center items-stretch sm:items-center overflow-hidden">
+    <div className="mobile-app-viewport w-full bg-[#050811] flex justify-center items-stretch sm:items-center overflow-hidden">
       {/* Mobile App Viewport Container */}
-      <div className="w-full max-w-md h-full min-h-dvh max-h-dvh flex flex-col justify-between bg-[#0b0f19] text-black font-sans select-none relative overflow-hidden sm:border-2 sm:border-black sm:shadow-[6px_6px_0px_#000] sm:rounded-2xl safe-pt safe-pb">
+      <div className="staging-lobby-shell w-full max-w-md h-full min-h-0 flex flex-col bg-[#0b0f19] text-black font-sans relative overflow-hidden sm:border-2 sm:border-black sm:shadow-[6px_6px_0px_#000] sm:rounded-2xl">
         
         {/* Mobile Header Bar */}
         <header className="px-3 py-2.5 border-b-2 border-black bg-white flex items-center justify-between shrink-0 shadow-[0_2px_0px_#000]">
           <button
             onClick={onLeaveRide}
-            className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-black border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-[10px] font-black flex items-center space-x-1"
+            className="min-h-11 px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-black border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-[10px] font-black flex items-center space-x-1"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Main</span>
@@ -277,7 +277,7 @@ export const StagingLobby: React.FC<StagingLobbyProps> = ({
         </header>
 
         {/* Scrollable Mobile Body */}
-        <main className="flex-1 overflow-y-auto p-3 space-y-2.5">
+        <main className="mobile-app-content flex-1 overflow-y-auto p-3 space-y-3">
           {/* Room Code & Share Card */}
           <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3 flex flex-col items-center justify-center text-center">
             <span className="text-[10px] font-mono font-black text-slate-600 uppercase">
@@ -563,7 +563,7 @@ export const StagingLobby: React.FC<StagingLobbyProps> = ({
         </main>
 
         {/* Sticky Mobile Bottom Bar (Start Convoy Ride Action) */}
-        <footer className="p-3 bg-white border-t-2 border-black shrink-0 shadow-[0_-2px_0px_#000]">
+        <footer className="staging-lobby-footer p-3 pt-2 bg-white border-t-2 border-black shrink-0 shadow-[0_-2px_0px_#000]">
           {isLeader ? (
             hasDestination ? (
               <button

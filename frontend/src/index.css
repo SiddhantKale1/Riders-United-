@@ -19,9 +19,40 @@ html, body, #root {
   background-color: #0b0f19;
   color: #111827;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  user-select: none;
-  -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+input, textarea, select {
+  font-size: 16px;
+}
+
+.mobile-app-viewport {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.mobile-app-shell,
+.staging-lobby-shell {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+
+.mobile-app-content {
+  min-height: 0;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.mobile-app-nav,
+.staging-lobby-footer {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem));
+}
+
+.mobile-app-shell button,
+.staging-lobby-shell button {
+  touch-action: manipulation;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

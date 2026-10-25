@@ -9,7 +9,9 @@ import { getApiBaseUrl } from './apiConfig';
 class SocketService {
   private socket: Socket | null = null;
   private connected: boolean = false;
-  private currentRideCode: string | null = null;
+  private currentRideCode: string | null = (() => {
+    try { return localStorage.getItem('riders_active_ride_code'); } catch { return null; }
+  })();
 
   // Callbacks
   private onRideStateCallback: ((ride: RideChannel) => void) | null = null;
@@ -34,16 +36,24 @@ class SocketService {
 
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 15,
-      reconnectionDelay: 1000
+      auth: { token: typeof localStorage !== 'undefined' ? localStorage.getItem('riders_auth_token') : null },
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 15000
     });
 
     this.socket.on('connect', () => {
       this.connected = true;
       if (this.onConnectionStatusChange) this.onConnectionStatusChange(true);
+      if (this.currentRideCode) this.socket?.emit('ride:join', { code: this.currentRideCode });
     });
 
     this.socket.on('disconnect', () => {
+      this.connected = false;
+      if (this.onConnectionStatusChange) this.onConnectionStatusChange(false);
+    });
+
+    this.socket.on('connect_error', () => {
       this.connected = false;
       if (this.onConnectionStatusChange) this.onConnectionStatusChange(false);
     });
@@ -72,8 +82,11 @@ class SocketService {
     });
 
     this.socket.on('ride:ended', (data) => {
+      this.clearRideCode();
       if (this.onRideEndedCallback) this.onRideEndedCallback(data);
     });
+
+    this.socket.on('ride:error', () => this.clearRideCode());
 
     this.socket.on('telemetry:broadcast', ({ riderId, telemetry }: { riderId: string; telemetry: Partial<Rider> }) => {
       if (this.onTelemetryCallback) this.onTelemetryCallback(riderId, telemetry);
@@ -115,9 +128,36 @@ class SocketService {
     });
   }
 
+  public reconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    this.init();
+  }
+
+  public disconnect() {
+    this.socket?.disconnect();
+    this.socket = null;
+    this.connected = false;
+    this.currentRideCode = null;
+    if (this.onConnectionStatusChange) this.onConnectionStatusChange(false);
+  }
+
   public joinRide(code: string, rider: Partial<Rider>) {
     this.currentRideCode = code.toUpperCase();
+    try { localStorage.setItem('riders_active_ride_code', this.currentRideCode); } catch {}
     this.emit('ride:join', { code: this.currentRideCode, rider });
+  }
+
+  public leaveRide() {
+    this.emit('ride:leave', {});
+    this.clearRideCode();
+  }
+
+  private clearRideCode() {
+    this.currentRideCode = null;
+    try { localStorage.removeItem('riders_active_ride_code'); } catch {}
   }
 
   public startConvoyRide() {

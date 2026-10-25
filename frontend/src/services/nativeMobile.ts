@@ -9,21 +9,12 @@ class NativeMobileService {
 
   // Initialize native mobile settings
   public async init() {
+    // Native mobile status bar and theme configuration
     try {
-      // Configure native status bar
       await StatusBar.setStyle({ style: Style.Dark });
       await StatusBar.setOverlaysWebView({ overlay: true });
     } catch {
-      // Running in browser/PWA - standard fallback
-    }
-
-    try {
-      // Lock to landscape by default on native mobile
-      await ScreenOrientation.lock({ orientation: 'landscape' });
-      this.isLandscapeLocked = true;
-    } catch {
-      // Browser Web API fallback
-      this.tryWebLandscapeLock();
+      // Browser fallback
     }
   }
 

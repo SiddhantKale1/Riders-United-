@@ -56,15 +56,10 @@ Handlebar-accessible quick action buttons for high-speed riding:
 - 🔄 **Regroup:** Chimes on all rider phones to slow down.
 - 🛑 **Emergency SOS:** High-priority siren alert with GPS drop pin.
 
-### 5. ⚡ Dual Tracking Modes: Live GPS vs. 5-Rider NH 66 Simulation
-- **Live Device GPS Mode:** Leverages the HTML5 Geolocation API (`watchPosition`) for actual road rides.
-- **Mumbai ➔ Goa Convoy Simulation:** Includes 5 realistic pre-configured riders:
-  1. *Vikram Singh* — `Thunder Lead` (Royal Enfield Himalayan 450)
-  2. *Priya Nair* — `Valkyrie Scout` (KTM 390 Adventure)
-  3. *Arjun Mehta* — `Ghost 03` (Kawasaki Ninja 650)
-  4. *Sameer Khan* — `Torque 04` (Triumph Scrambler 400X)
-  5. *Rahul Deshmukh* — `Tail Sweeper` (BMW R 1250 GS)
-- **Simulation Controls:** Pause/Play, Speed Multipliers (**1x, 2x, 5x, 10x**), and checkpoint jump.
+### 5. ⚡ Live GPS Tracking
+- Uses device geolocation for the signed-in rider and Socket.IO to share live positions with convoy members.
+- Active rides persist in SQLite across restarts. Invite codes expire after 24 hours without lobby activity or 48 hours without active-ride activity; completed ride history is retained for up to 365 days and can also be cleared in the app.
+- The five-rider Mumbai ➔ Goa simulation described in earlier versions has been removed.
 
 ### 6. 🏍️ Cockpit HUD & Handlebar Mount Optimizations
 - **Digital Speedometer:** Large high-contrast speed readout (km/h) with dynamic RPM progress arc.
@@ -77,6 +72,14 @@ Handlebar-accessible quick action buttons for high-speed riding:
 ---
 
 ## 🚀 Quick Start
+
+### Backend security configuration
+
+Set `NODE_ENV=production`, a stable random `AUTH_SECRET` of at least 32 bytes, and `CORS_ALLOWED_ORIGINS` to a comma-separated list of exact app origins before deployment. Include `https://localhost` and/or `capacitor://localhost` if using Capacitor. Production rejects non-HTTPS requests; terminate TLS at a reverse proxy and forward `X-Forwarded-Proto: https`. Restrict access to the backend HTTP port so only that proxy can reach it. Set `TRUST_PROXY=true` when using the proxy so client IP rate limits use the real remote address. Convoy creation, ride lookup, and Socket.IO rides require a signed-in account. Development origins are allowed by default only outside production.
+
+Riders can change their password or revoke sessions for every device from the Garage profile card. Email-based password recovery is not enabled until an email delivery provider is configured. `/api/health` reports backend/database status, connected sockets, request errors, latency, memory, and uptime.
+
+For packaged Android/iOS builds, set `VITE_BACKEND_URL` to the reachable backend URL before building (for example, `VITE_BACKEND_URL=https://api.example.com npm run build`). Users can also set the backend address in the app’s Server settings. The build-time default is `http://localhost:5001` for local development.
 
 ### Prerequisites
 - Node.js (v18+)
@@ -105,6 +108,7 @@ Runs both the Express/Socket.IO backend and the Vite HMR dev server concurrently
 npm run dev
 ```
 Open **`http://localhost:5173`** (Frontend) or **`http://localhost:5001`** (Backend).
+For another device on the same Wi-Fi, open the Vite **Network** URL printed by the command (for example, `http://192.168.x.x:5173`). The browser app uses Vite’s `/api` and `/socket.io` proxies, so the device does not need to connect directly to backend port `5001`. Guest Wi-Fi or router client-isolation settings can still block device-to-device connections.
 
 ---
 

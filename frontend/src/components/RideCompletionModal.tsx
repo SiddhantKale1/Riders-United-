@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Compass, Clock, Gauge, ArrowRight, X, AlertTriangle, CheckCircle2, History } from 'lucide-react';
+import { Award, Compass, Clock, Gauge, ArrowRight, X, AlertTriangle, CheckCircle2, History, Share2, MessageSquare } from 'lucide-react';
 import { CompletedRide } from '../types';
 
 interface RideCompletionModalProps {
@@ -20,6 +20,12 @@ export const RideCompletionModal: React.FC<RideCompletionModalProps> = ({
   const hours = Math.floor(rideData.durationMinutes / 60);
   const mins = Math.round(rideData.durationMinutes % 60);
   const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
+
+  const handleShareStory = () => {
+    const text = `🏆 Mission Accomplished with Riders United!\n\n🛣️ Route: ${rideData.startName} ➔ ${rideData.destName}\n📏 Distance: ${rideData.distanceKm} km\n⏱️ Duration: ${timeStr}\n⚡ Avg Speed: ${rideData.avgSpeedKmh || 45} km/h\n\nTrack your motorcycle convoy live on Riders United!`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
@@ -108,6 +114,15 @@ export const RideCompletionModal: React.FC<RideCompletionModalProps> = ({
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">
+          <button
+            type="button"
+            onClick={handleShareStory}
+            className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2.5px_2.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all flex items-center justify-center space-x-2"
+          >
+            <MessageSquare className="w-4 h-4 text-white" />
+            <span>Share Victory on WhatsApp</span>
+          </button>
+
           {onViewHistory && (
             <button
               type="button"

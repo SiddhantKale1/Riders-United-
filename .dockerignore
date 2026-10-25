@@ -1,0 +1,15 @@
+.git
+.github
+.agent
+node_modules
+frontend/node_modules
+backend/node_modules
+frontend/dist
+frontend/android
+frontend/ios
+backend/data
+*.apk
+*.log
+.env
+.env.*
+!*.env.example

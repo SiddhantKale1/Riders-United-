@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import { ClassicMobileApp, MobileTab } from './components/ClassicMobileApp';
 import { StagingLobby } from './components/StagingLobby';
-import { MapView } from './components/MapView';
+const MapView = lazy(() => import('./components/MapView').then((module) => ({ default: module.MapView })));
 import { GoogleMapsTurnCard } from './components/GoogleMapsTurnCard';
 import { GoogleMapsTopBar } from './components/GoogleMapsTopBar';
 import { SpeedometerPill } from './components/SpeedometerPill';
@@ -11,6 +11,11 @@ import { ConvoyRoster } from './components/ConvoyRoster';
 import { CreateJoinModal } from './components/CreateJoinModal';
 import { RideCompletionModal, ExitConfirmModal } from './components/RideCompletionModal';
 import { AuthModal } from './components/AuthModal';
+import { PasswordChangeModal } from './components/PasswordChangeModal';
+import { CrashSirenModal } from './components/CrashSirenModal';
+import { ShareRideModal } from './components/ShareRideModal';
+import { crashDetectionService } from './services/crashDetectionService';
+import { speechService } from './services/speechService';
 import {
   RideChannel,
   Rider,
@@ -31,6 +36,11 @@ import { geolocationService } from './services/geolocationService';
 import { routingService } from './services/routingService';
 import { nativeMobile } from './services/nativeMobile';
 import { getApiBaseUrl } from './services/apiConfig';
+
+const authHeaders = (headers: Record<string, string> = {}): Record<string, string> => {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('riders_auth_token') : null;
+  return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
+};
 
 export type AppScreen = 'mobile' | 'lobby' | 'cockpit';
 
@@ -55,6 +65,7 @@ export function App() {
     return null;
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isPasswordChangeOpen, setIsPasswordChangeOpen] = useState(false);
 
   // Ride History (Persisted in SQLite database + LocalStorage)
   const [rideHistory, setRideHistory] = useState<CompletedRide[]>(() => {
@@ -71,10 +82,31 @@ export function App() {
   const [completedRideData, setCompletedRideData] = useState<CompletedRide | null>(null);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState<boolean>(false);
 
+  // Pure Smartphone Motion Crash Detection ($0, On-Device)
+  const [isCrashModalOpen, setIsCrashModalOpen] = useState<boolean>(false);
+  const [crashMaxG, setCrashMaxG] = useState<number>(4.2);
+
+  // 1-Click WhatsApp Invite Modal
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [shareCode, setShareCode] = useState<string>('');
+
+  // Start Crash Detection on phone sensors
+  useEffect(() => {
+    crashDetectionService.start();
+    const unsub = crashDetectionService.subscribe((event) => {
+      setCrashMaxG(event.maxG);
+      setIsCrashModalOpen(true);
+    });
+    return () => {
+      unsub();
+      crashDetectionService.stop();
+    };
+  }, []);
+
   // Sync ride history from database for logged in user
   useEffect(() => {
     if (authUser?.id) {
-      fetch(`${getApiBaseUrl()}/api/rides/history?userId=${authUser.id}`)
+      fetch(`${getApiBaseUrl()}/api/rides/history`, { headers: authHeaders() })
         .then((res) => res.json())
         .then((data) => {
           if (data && Array.isArray(data.history)) {
@@ -97,7 +129,10 @@ export function App() {
   }>(() => {
     try {
       const saved = localStorage.getItem('riders_user_profile');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const profile = JSON.parse(saved);
+        return authUser?.id ? { ...profile, id: authUser.id } : profile;
+      }
     } catch {}
     const newId = `rider-${Math.random().toString(36).substring(2, 9)}`;
     return {
@@ -179,6 +214,8 @@ export function App() {
     socketService.setOnRideState((state: RideChannel) => {
       setRide(state);
       setRiders(state.riders || []);
+      setScreen(state.status === 'active' ? 'cockpit' : 'lobby');
+      setIsRideActive(state.status === 'active');
       setMessages(state.messages || []);
       if (state.activeRoute) {
         setActiveRoute(state.activeRoute);
@@ -313,8 +350,13 @@ export function App() {
         return;
       }
 
-      // On-route hazard: play audio alert chime and show banner
+      // On-route hazard: play audio alert chime, spoken prompt, and show banner
       audioEffects.playAlertSound(newAlert.type);
+      if (newAlert.type === 'sos') {
+        speechService.announceSos(newAlert.creatorName);
+      } else {
+        speechService.announceHazard(newAlert.type, newAlert.creatorName);
+      }
       setAlerts((prev) => [newAlert, ...prev.filter((a) => a.id !== newAlert.id)]);
       if (msg) {
         addChatMessage({
@@ -438,10 +480,14 @@ export function App() {
 
   // 1. Create a Ride Group
   const handleCreateGroup = async (title: string, targetSpeed: number) => {
+    if (!authUser) {
+      alert('Sign in to create or join a convoy. Solo rides are still available.');
+      return;
+    }
     try {
       const res = await fetch(`${getApiBaseUrl()}/api/rides`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           title,
           leaderId: profile.id,
@@ -471,8 +517,9 @@ export function App() {
 
   // 2. Join a Ride Group via Code
   const handleJoinGroup = async (code: string) => {
+    if (!authUser) throw new Error('Sign in to join a convoy. Solo rides are still available.');
     const formattedCode = code.trim().toUpperCase();
-    const res = await fetch(`${getApiBaseUrl()}/api/rides/${formattedCode}`);
+    const res = await fetch(`${getApiBaseUrl()}/api/rides/${formattedCode}`, { headers: authHeaders() });
     if (!res.ok) {
       throw new Error(`Convoy code "${formattedCode}" does not exist.`);
     }
@@ -678,6 +725,7 @@ export function App() {
     setAuthUser(user);
     setProfile((prev) => ({
       ...prev,
+      id: user.id,
       name: user.name || prev.name,
       callsign: user.callsign || prev.callsign,
       bikeModel: user.bikeModel || prev.bikeModel,
@@ -685,7 +733,7 @@ export function App() {
     }));
 
     // Fetch user's saved ride history from SQLite database
-    fetch(`${getApiBaseUrl()}/api/rides/history?userId=${user.id}`)
+    fetch(`${getApiBaseUrl()}/api/rides/history`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((data) => {
         if (data && Array.isArray(data.history)) {
@@ -697,14 +745,24 @@ export function App() {
   };
 
   const handleSignOut = () => {
+    socketService.disconnect();
     localStorage.removeItem('riders_auth_user');
     localStorage.removeItem('riders_auth_token');
     setAuthUser(null);
   };
 
+  const handleRevokeSessions = async () => {
+    const response = await fetch(`${getApiBaseUrl()}/api/auth/sessions/revoke`, {
+      method: 'POST',
+      headers: authHeaders()
+    });
+    if (!response.ok) throw new Error('Could not revoke other sessions.');
+    handleSignOut();
+  };
+
   const handleClearHistory = () => {
     if (authUser?.id) {
-      fetch(`${getApiBaseUrl()}/api/rides/history?userId=${authUser.id}`, { method: 'DELETE' }).catch(() => {});
+      fetch(`${getApiBaseUrl()}/api/rides/history`, { method: 'DELETE', headers: authHeaders() }).catch(() => {});
     }
     localStorage.removeItem('riders_ride_history');
     setRideHistory([]);
@@ -747,8 +805,8 @@ export function App() {
     // Save to SQLite database
     fetch(`${getApiBaseUrl()}/api/rides/history`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: authUser?.id || null, ride: completedRide })
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ ride: completedRide })
     }).catch(() => {});
 
     setCompletedRideData(completedRide);
@@ -772,6 +830,7 @@ export function App() {
   };
 
   const handleLeaveLobby = () => {
+    socketService.leaveRide();
     setRide(null);
     setRiders([]);
     setScreen('mobile');
@@ -863,8 +922,40 @@ export function App() {
           authUser={authUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onSignOut={handleSignOut}
+          onChangePassword={() => setIsPasswordChangeOpen(true)}
+          onRevokeSessions={handleRevokeSessions}
           rideHistory={rideHistory}
           onClearHistory={handleClearHistory}
+          onOpenShare={(code) => {
+            setShareCode(code || ride?.code || '');
+            setIsShareModalOpen(true);
+          }}
+          onTestCrash={() => crashDetectionService.simulateCrash(4.2)}
+        />
+
+        {/* 1-Click WhatsApp Invite Modal */}
+        <ShareRideModal
+          isOpen={isShareModalOpen}
+          rideCode={shareCode}
+          rideTitle={ride?.title || 'Convoy Run'}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+
+        {/* 100% On-Device Motion Crash Detector Siren Modal */}
+        <CrashSirenModal
+          isOpen={isCrashModalOpen}
+          maxG={crashMaxG}
+          riderName={profile.name}
+          callsign={profile.callsign}
+          bikeModel={profile.bikeModel}
+          currentCoords={currentGpsCoords}
+          emergencyContactName={authUser?.name || 'Emergency Contact'}
+          emergencyContactPhone={typeof localStorage !== 'undefined' ? localStorage.getItem('riders_emergency_phone') || '' : ''}
+          bloodGroup={typeof localStorage !== 'undefined' ? localStorage.getItem('riders_blood_group') || 'O+' : 'O+'}
+          onCancel={() => setIsCrashModalOpen(false)}
+          onSosDispatched={() => {
+            setIsCrashModalOpen(false);
+          }}
         />
 
         {/* In-App Ride Completed & Congratulations Modal */}
@@ -883,6 +974,10 @@ export function App() {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onAuthSuccess={handleAuthSuccess}
+        />
+        <PasswordChangeModal
+          isOpen={isPasswordChangeOpen}
+          onClose={() => setIsPasswordChangeOpen(false)}
         />
       </>
     );
@@ -925,6 +1020,7 @@ export function App() {
     <div className="relative w-full h-dvh max-h-dvh overflow-hidden bg-[#0b0f19] font-sans select-none text-black">
       {/* Fullscreen Interactive Leaflet Map (Satellite Imagery ONLY) */}
       <div className="absolute inset-0 w-full h-full z-0">
+        <Suspense fallback={<div className="h-full w-full bg-[#090b10]" aria-label="Loading map" />}>
         <MapView
           riders={riders}
           waypoints={activeWaypoints}
@@ -934,7 +1030,9 @@ export function App() {
           activeRoutePath={activeRoute?.coordinates}
           isRideActive={isRideActive}
           startPoint={activeRoute && activeRoute.coordinates.length > 0 ? { lat: activeRoute.coordinates[0][0], lng: activeRoute.coordinates[0][1] } : null}
+          alerts={alerts}
         />
+        </Suspense>
       </div>
 
       {/* Top Left: Neobrutalism Turn-by-Turn Card */}
@@ -1044,6 +1142,31 @@ export function App() {
           setIsCompletionModalOpen(false);
           setMobileTab('garage');
           setScreen('mobile');
+        }}
+      />
+
+      {/* 1-Click WhatsApp Invite Modal in Cockpit */}
+      <ShareRideModal
+        isOpen={isShareModalOpen}
+        rideCode={ride?.code || shareCode}
+        rideTitle={ride?.title || 'Convoy Run'}
+        onClose={() => setIsShareModalOpen(false)}
+      />
+
+      {/* 100% On-Device Motion Crash Detector Siren Modal in Cockpit */}
+      <CrashSirenModal
+        isOpen={isCrashModalOpen}
+        maxG={crashMaxG}
+        riderName={profile.name}
+        callsign={profile.callsign}
+        bikeModel={profile.bikeModel}
+        currentCoords={currentGpsCoords}
+        emergencyContactName={authUser?.name || 'Emergency Contact'}
+        emergencyContactPhone={typeof localStorage !== 'undefined' ? localStorage.getItem('riders_emergency_phone') || '' : ''}
+        bloodGroup={typeof localStorage !== 'undefined' ? localStorage.getItem('riders_blood_group') || 'O+' : 'O+'}
+        onCancel={() => setIsCrashModalOpen(false)}
+        onSosDispatched={() => {
+          setIsCrashModalOpen(false);
         }}
       />
     </div>

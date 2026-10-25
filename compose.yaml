@@ -1,0 +1,48 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "5001"
+      DATABASE_PATH: /data/riders_united.db
+      TRUST_PROXY: "true"
+      CORS_ALLOWED_ORIGINS: "https://localhost,capacitor://localhost"
+    expose:
+      - "5001"
+    volumes:
+      - riders_data:/data
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  duckdns:
+    image: alpine:3.21
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        apk add --no-cache curl >/dev/null;
+        while true; do
+          curl -fsS "https://www.duckdns.org/update?domains=$${DUCKDNS_DOMAIN}&token=$${DUCKDNS_TOKEN}&ip=";
+          sleep 300;
+        done
+
+volumes:
+  riders_data:
+  caddy_data:
+  caddy_config:

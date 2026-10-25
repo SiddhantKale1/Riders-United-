@@ -78,12 +78,24 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
       }
     };
 
+    // Android Physical Volume Down / Headset Hook PTT trigger (Zero hardware required)
+    const handleHardwarePtt = (e: Event) => {
+      const customEvent = e as CustomEvent<{ state: 'down' | 'up' }>;
+      if (customEvent.detail?.state === 'down') {
+        startTalking();
+      } else if (customEvent.detail?.state === 'up') {
+        stopTalking();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('hardware-ptt', handleHardwarePtt);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('hardware-ptt', handleHardwarePtt);
     };
   }, [currentRiderId, callsign, channel]);
 

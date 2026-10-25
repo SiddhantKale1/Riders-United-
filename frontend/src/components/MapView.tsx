@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { Rider, Waypoint, TacticalAlert, CameraMode } from '../types';
-import { routingService } from '../services/routingService';
-import { Crosshair, Navigation, Crown } from 'lucide-react';
+import { Crosshair, Navigation, Crown, AlertTriangle } from 'lucide-react';
 
 interface MapViewProps {
   riders: Rider[];
@@ -13,6 +12,7 @@ interface MapViewProps {
   activeRoutePath?: [number, number][];
   isRideActive?: boolean;
   startPoint?: { lat: number; lng: number } | null;
+  alerts?: TacticalAlert[];
 }
 
 // Strictly Satellite View Only — Esri World Imagery (High-Res Photorealistic Satellite)
@@ -28,12 +28,14 @@ export const MapView: React.FC<MapViewProps> = ({
   onSetCameraMode,
   activeRoutePath,
   isRideActive,
-  startPoint
+  startPoint,
+  alerts = []
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const ridersLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const waypointsLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const alertsLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const routePolylineRef = useRef<L.Polyline | null>(null);
   const casingPolylineRef = useRef<L.Polyline | null>(null);
 
@@ -91,6 +93,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
     ridersLayerGroupRef.current = L.layerGroup().addTo(map);
     waypointsLayerGroupRef.current = L.layerGroup().addTo(map);
+    alertsLayerGroupRef.current = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
 
@@ -108,7 +111,6 @@ export const MapView: React.FC<MapViewProps> = ({
     if (routePolylineRef.current) map.removeLayer(routePolylineRef.current);
     if (casingPolylineRef.current) map.removeLayer(casingPolylineRef.current);
 
-    // Thick solid black casing for crisp contrast against photorealistic satellite terrain
     const blackCasing = L.polyline(pathCoordinates, {
       color: '#000000',
       weight: 8,
@@ -117,7 +119,6 @@ export const MapView: React.FC<MapViewProps> = ({
       lineJoin: 'round'
     }).addTo(map);
 
-    // Vivid Blue Core (Neobrutal High-Energy Blue)
     const blueLine = L.polyline(pathCoordinates, {
       color: '#2563eb',
       weight: 4.5,
@@ -129,7 +130,6 @@ export const MapView: React.FC<MapViewProps> = ({
     casingPolylineRef.current = blackCasing;
     routePolylineRef.current = blueLine;
 
-    // If new custom route selected, fit bounds to show the entire route
     if (activeRoutePath && activeRoutePath.length > 1) {
       const bounds = L.latLngBounds(activeRoutePath);
       map.fitBounds(bounds, { padding: [70, 70], animate: true });
@@ -140,6 +140,53 @@ export const MapView: React.FC<MapViewProps> = ({
       map.removeLayer(blueLine);
     };
   }, [activeRoutePath]);
+
+  // Update Tactical Alert Markers (Hazard Radar)
+  useEffect(() => {
+    const layer = alertsLayerGroupRef.current;
+    if (!layer) return;
+
+    layer.clearLayers();
+
+    alerts.forEach((alert) => {
+      let iconText = '⚠️';
+      let bgColor = 'bg-amber-400 text-black';
+
+      if (alert.type === 'sos') {
+        iconText = '🚨';
+        bgColor = 'bg-red-600 text-white animate-bounce';
+      } else if (alert.type === 'police') {
+        iconText = '👮';
+        bgColor = 'bg-blue-600 text-white';
+      } else if (alert.type === 'fuel') {
+        iconText = '⛽';
+        bgColor = 'bg-orange-500 text-white';
+      } else if (alert.type === 'breakdown') {
+        iconText = '🔧';
+        bgColor = 'bg-purple-600 text-white';
+      }
+
+      const alertIcon = L.divIcon({
+        className: 'custom-alert-marker',
+        html: `
+          <div class="relative flex flex-col items-center -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+            <div class="px-2 py-1 rounded-xl text-xs font-black border-2 border-black shadow-[2px_2px_0px_#000] ${bgColor} flex items-center gap-1">
+              <span>${iconText}</span>
+              <span class="text-[9px] uppercase font-bold tracking-tight">${alert.title.split(' ')[0]}</span>
+            </div>
+            <div class="hidden group-hover:block absolute top-7 bg-black text-white border border-white/40 text-[9px] font-mono px-2 py-0.5 rounded shadow-xl whitespace-nowrap z-50 pointer-events-none">
+              ${alert.detail} (${alert.creatorName})
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [0, 0]
+      });
+
+      const marker = L.marker([alert.lat, alert.lng], { icon: alertIcon });
+      layer.addLayer(marker);
+    });
+  }, [alerts]);
 
   // Update Waypoint Markers (Neobrutal Red & Blue Badges)
   useEffect(() => {
@@ -190,24 +237,32 @@ export const MapView: React.FC<MapViewProps> = ({
     });
   }, [waypoints]);
 
-  // Update Neobrutalist Rider Markers (Red & Blue Contrast on Satellite)
+  // Update Rider Markers with Dead-Zone Ghosting
   useEffect(() => {
     const layer = ridersLayerGroupRef.current;
     const map = mapInstanceRef.current;
     if (!layer || !map) return;
 
     layer.clearLayers();
+    const now = Date.now();
 
     riders.forEach((rider) => {
       const isLeader = rider.role === 'leader';
       const isMe = rider.id === currentRiderId;
       const isTalking = rider.isTalking;
 
-      // Leader gets Red badge, Me gets Blue badge, other riders get Blue or White
-      const puckBg = isLeader ? '#ef4444' : isMe ? '#2563eb' : '#ffffff';
-      const puckText = (isLeader || isMe) ? '#ffffff' : '#000000';
+      // Dead-Zone Ghosting: If rider has not pinged in > 30 seconds
+      const isGhost = rider.lastPing && now - rider.lastPing > 30000 && !isMe;
+      const pingAgoSec = rider.lastPing ? Math.round((now - rider.lastPing) / 1000) : 0;
+
+      const puckBg = isGhost ? '#f97316' : isLeader ? '#ef4444' : isMe ? '#2563eb' : '#ffffff';
+      const puckText = (isLeader || isMe || isGhost) ? '#ffffff' : '#000000';
+      const puckOpacity = isGhost ? 'opacity-75' : 'opacity-100';
+
       const roleTag = isLeader
         ? '<span class="absolute -top-1.5 -right-1.5 text-[7px] bg-yellow-400 text-black border border-black rounded px-0.5 font-black">LEAD</span>'
+        : isGhost
+        ? '<span class="absolute -top-1.5 -right-1.5 text-[7px] bg-red-600 text-white border border-black rounded px-0.5 font-black animate-pulse">!</span>'
         : '';
 
       const talkingGlow = isTalking
@@ -216,16 +271,20 @@ export const MapView: React.FC<MapViewProps> = ({
 
       const riderInitial = rider.callsign ? rider.callsign.charAt(0).toUpperCase() : 'R';
 
+      const tagBadge = isGhost
+        ? `<span class="text-amber-500 font-mono font-bold">${pingAgoSec}s GHOST</span>`
+        : `<span class="${isLeader ? 'text-red-600' : 'text-blue-600'}">${rider.speed}k</span>`;
+
       const riderIcon = L.divIcon({
         className: 'custom-rider-icon',
         html: `
-          <div class="relative flex flex-col items-center select-none cursor-pointer group" style="transform: translate(-50%, -50%);">
+          <div class="relative flex flex-col items-center select-none cursor-pointer group ${puckOpacity}" style="transform: translate(-50%, -50%);">
             <!-- Heading Pointer Arrow -->
             <div
               class="absolute w-8 h-8 flex items-center justify-center pointer-events-none"
               style="transform: rotate(${rider.heading}deg);"
             >
-              <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] border-b-blue-500 absolute -top-1.5"></div>
+              <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] ${isGhost ? 'border-b-amber-500' : 'border-b-blue-500'} absolute -top-1.5"></div>
             </div>
 
             <!-- Neobrutalist Rider Puck -->
@@ -244,7 +303,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <div class="mt-1 bg-white text-black border border-black shadow-[1px_1px_0px_#000] px-1.5 py-0.2 rounded text-[8px] font-black flex items-center space-x-1 whitespace-nowrap">
               <span>${rider.callsign.split(' ')[0]}</span>
               <span class="text-slate-400">•</span>
-              <span class="${isLeader ? 'text-red-600' : 'text-blue-600'}">${rider.speed}k</span>
+              ${tagBadge}
             </div>
           </div>
         `,
@@ -273,7 +332,7 @@ export const MapView: React.FC<MapViewProps> = ({
     <div className="relative w-full h-full overflow-hidden bg-[#0b0f19]">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Floating Right Action: Recenter Mode FAB ONLY (Satellite is locked, no voyager or dark options) */}
+      {/* Floating Right Action: Recenter Mode FAB */}
       <div className="absolute top-[max(4.5rem,calc(env(safe-area-inset-top,0px)+3.25rem))] right-[max(0.875rem,env(safe-area-inset-right,0.875rem))] z-20 flex flex-col items-center pointer-events-auto">
         <button
           onClick={() => {

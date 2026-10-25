@@ -23,10 +23,21 @@ import {
   History,
   LogOut,
   Award,
-  Clock
+  Clock,
+  Server,
+  Settings,
+  Share2,
+  AlertTriangle,
+  Volume2,
+  Download,
+  ShieldCheck
 } from 'lucide-react';
 import { RiderRole, ActiveRoute, CompletedRide, AuthUser } from '../types';
 import { routingService, LocationSearchResult, FuelStop } from '../services/routingService';
+import { getApiBaseUrl, setApiBaseUrl, testServerConnection, DEFAULT_BACKEND_URL } from '../services/apiConfig';
+import { socketService } from '../services/socket';
+import { speechService } from '../services/speechService';
+import { offlineMapService } from '../services/offlineMapService';
 
 export type MobileTab = 'ride' | 'squad' | 'fuel' | 'garage';
 
@@ -53,8 +64,12 @@ interface ClassicMobileAppProps {
   authUser?: AuthUser | null;
   onOpenAuth?: () => void;
   onSignOut?: () => void;
+  onChangePassword?: () => void;
+  onRevokeSessions?: () => Promise<void>;
   rideHistory?: CompletedRide[];
   onClearHistory?: () => void;
+  onOpenShare?: (code: string) => void;
+  onTestCrash?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -86,8 +101,12 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
   authUser = null,
   onOpenAuth,
   onSignOut,
+  onChangePassword,
+  onRevokeSessions,
   rideHistory = [],
-  onClearHistory
+  onClearHistory,
+  onOpenShare,
+  onTestCrash
 }) => {
   // Active Bottom Navigation Tab
   const [activeTab, setActiveTab] = useState<MobileTab>(initialTab);
@@ -132,6 +151,82 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
   // Fuel Radar State
   const [nearbyFuelStops, setNearbyFuelStops] = useState<FuelStop[]>([]);
   const [isLoadingFuel, setIsLoadingFuel] = useState(false);
+
+  // Server Host Config State
+  const [garageServerUrl, setGarageServerUrl] = useState(getApiBaseUrl());
+  const [isTestingGarageServer, setIsTestingGarageServer] = useState(false);
+  const [garageServerStatus, setGarageServerStatus] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSaveGarageServer = async () => {
+    setIsTestingGarageServer(true);
+    setGarageServerStatus(null);
+    const res = await testServerConnection(garageServerUrl);
+    setIsTestingGarageServer(false);
+    setGarageServerStatus(res);
+    if (res.success) {
+      setApiBaseUrl(garageServerUrl);
+      socketService.reconnect();
+    }
+  };
+
+  const handleResetGarageServer = () => {
+    setGarageServerUrl(DEFAULT_BACKEND_URL);
+    setApiBaseUrl(DEFAULT_BACKEND_URL);
+    socketService.reconnect();
+    setGarageServerStatus({ success: true, message: `Reset to default: ${DEFAULT_BACKEND_URL}` });
+  };
+
+  // Emergency Contact, ICE & Spoken Prompts State
+  const [emergencyPhone, setEmergencyPhone] = useState(() => {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('riders_emergency_phone') || '' : '';
+  });
+  const [bloodGroup, setBloodGroup] = useState(() => {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('riders_blood_group') || 'O+' : 'O+';
+  });
+  const [spokenPrompts, setSpokenPrompts] = useState(() => speechService.getIsEnabled());
+  const [cachedTileCount, setCachedTileCount] = useState<number>(0);
+  const [isCachingMap, setIsCachingMap] = useState<boolean>(false);
+  const [cacheProgress, setCacheProgress] = useState<number>(0);
+
+  useEffect(() => {
+    offlineMapService.getCachedCount().then(setCachedTileCount);
+  }, []);
+
+  const handleToggleSpokenPrompts = () => {
+    const next = !spokenPrompts;
+    setSpokenPrompts(next);
+    speechService.setEnabled(next);
+    if (next) {
+      speechService.speak('Spoken convoy alerts enabled.');
+    }
+  };
+
+  const handleSaveIceInfo = () => {
+    localStorage.setItem('riders_emergency_phone', emergencyPhone);
+    localStorage.setItem('riders_blood_group', bloodGroup);
+    setProfileSavedToast(true);
+    setTimeout(() => setProfileSavedToast(false), 2000);
+  };
+
+  const handleDownloadOfflineRoute = async () => {
+    setIsCachingMap(true);
+    setCacheProgress(0);
+    const corridorPoints: [number, number][] = [
+      [18.922, 72.8346],
+      [18.7557, 73.4091],
+      [18.1500, 73.3400],
+      [17.7200, 73.5300],
+      [17.0000, 73.3000],
+      [16.1500, 73.7000],
+      [15.5500, 73.7500]
+    ];
+    await offlineMapService.downloadRouteTiles(corridorPoints, (percent) => {
+      setCacheProgress(percent);
+    });
+    const count = await offlineMapService.getCachedCount();
+    setCachedTileCount(count);
+    setIsCachingMap(false);
+  };
 
   // Reverse geocode live GPS to enhance location label
   useEffect(() => {
@@ -291,7 +386,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
   const handleSubmitJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!joinCode.trim()) {
-      setJoinError('Enter a 6-character room code');
+      setJoinError('Enter the ride code from your Road Captain.');
       return;
     }
     setIsJoining(true);
@@ -299,7 +394,12 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
     try {
       await onJoinGroup(joinCode.trim().toUpperCase());
     } catch (err: any) {
-      setJoinError(err?.message || 'Could not find convoy squad. Verify code.');
+      const isFetchErr = err?.message?.toLowerCase().includes('fetch') || err?.name === 'TypeError';
+      if (isFetchErr) {
+        setJoinError(`Cannot connect to server at ${getApiBaseUrl()}. Check Wi-Fi or update Server IP in Garage.`);
+      } else {
+        setJoinError(err?.message || 'Could not find convoy squad. Verify code.');
+      }
     } finally {
       setIsJoining(false);
     }
@@ -312,37 +412,39 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
     try {
       await onCreateGroup(title, targetSpeed);
     } catch (err: any) {
-      alert(err?.message || 'Failed to create convoy squad.');
+      const isFetchErr = err?.message?.toLowerCase().includes('fetch') || err?.name === 'TypeError';
+      alert(isFetchErr ? `Cannot connect to server at ${getApiBaseUrl()}. Check Wi-Fi or update Server IP in Garage.` : (err?.message || 'Failed to create convoy squad.'));
     } finally {
       setIsCreating(false);
     }
   };
 
   return (
-    <div className="w-full min-h-dvh h-dvh bg-[#050811] flex justify-center items-stretch sm:items-center overflow-hidden">
+    <div className="mobile-app-viewport w-full bg-[#050811] flex justify-center items-stretch sm:items-center overflow-hidden">
       {/* Classic Mobile App Shell: Mobile App framing on desktop, 100% full-screen on mobile */}
-      <div className="w-full max-w-md h-full min-h-dvh max-h-dvh flex flex-col justify-between bg-[#0b0f19] text-black font-sans select-none relative overflow-hidden sm:border-2 sm:border-black sm:shadow-[6px_6px_0px_#000] sm:rounded-2xl safe-pt">
+      <div className="mobile-app-shell w-full max-w-md h-full min-h-0 flex flex-col bg-[#0b0f19] text-black font-sans relative overflow-hidden sm:border-2 sm:border-black sm:shadow-[6px_6px_0px_#000] sm:rounded-2xl">
         
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {/* 1. PERSISTENT TOP APP BAR                                             */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
-        <header className="px-3.5 py-3 border-b-2 border-black bg-white relative flex items-center justify-center shrink-0 shadow-[0_2px_0px_#000] z-20 min-h-[48px]">
-          {/* Centered App Title in Neobrutalist Red Box */}
-          <div className="flex items-center justify-center">
-            <div className="px-3 py-1 bg-[#ef4444] text-white border-2 border-black rounded-lg shadow-[2px_2px_0px_#000] flex items-center justify-center">
-              <h1 className="text-xs font-black uppercase tracking-wider text-white leading-none">
-                Riders United
-              </h1>
+        <header className="min-h-14 px-3 py-2 border-b-2 border-black bg-white shrink-0 shadow-[0_2px_0px_#000] z-20 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="relative h-9 w-10 shrink-0 rounded-lg bg-[#ef4444] text-white border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center">
+              <span className="text-sm font-black tracking-tight">RU</span>
+              <span className="absolute -bottom-1 -right-1 h-2.5 w-2.5 rounded-sm border border-black bg-amber-400" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-xs font-black uppercase tracking-wide text-black leading-tight">Riders United</h1>
+              <p className="truncate text-[9px] font-mono font-bold uppercase tracking-wider text-[#2563eb]">Ride together. Stay connected.</p>
             </div>
           </div>
 
-          {/* Rider Identity Pill (Anchored to Right) */}
-          <div className="absolute right-3.5 flex items-center space-x-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             {!authUser && onOpenAuth && (
               <button
                 type="button"
                 onClick={onOpenAuth}
-                className="px-2 py-1 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white border-2 border-black text-[9px] font-black uppercase shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+                className="min-h-10 px-2 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white border-2 border-black text-[10px] font-black uppercase shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
                 title="Sign in or Register"
               >
                 Sign In
@@ -352,7 +454,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('garage')}
-              className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg border-2 border-black text-[10px] font-black transition-all ${
+              className={`min-h-10 flex items-center gap-1.5 px-2 rounded-lg border-2 border-black text-[10px] font-black transition-all ${
                 activeTab === 'garage'
                   ? 'bg-black text-white shadow-none'
                   : 'bg-slate-50 text-black hover:bg-slate-100 shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px]'
@@ -363,7 +465,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                 className="w-3.5 h-3.5 rounded-full border border-black shrink-0"
                 style={{ backgroundColor: currentProfile.avatarColor }}
               />
-              <span className="truncate max-w-[70px]">{currentProfile.callsign}</span>
+              <span className="truncate max-w-[68px]">{currentProfile.callsign}</span>
             </button>
           </div>
         </header>
@@ -371,13 +473,13 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {/* 2. SCROLLABLE TAB CONTENT BODY                                        */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
-        <main className="flex-1 overflow-y-auto px-3.5 py-3 pb-24 flex flex-col">
+        <main className="mobile-app-content flex-1 overflow-y-auto px-3 py-4 flex flex-col">
 
           {/* ───────────────────────────────────────────────────────────────── */}
           {/* TAB 1: RIDE / NAVIGATION                                          */}
           {/* ───────────────────────────────────────────────────────────────── */}
           {activeTab === 'ride' && (
-            <div className="my-auto space-y-3.5 animate-fadeIn py-2 w-full">
+            <div className="space-y-4 animate-fadeIn py-1 w-full">
               {/* Hero Status Card */}
               <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3.5 flex items-center justify-between">
                 <div>
@@ -589,7 +691,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                 <form onSubmit={handleSubmitJoin} className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3.5 space-y-3">
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-black block mb-1">
-                      Enter 6-Character Squad Code
+                      Enter 12-Character Squad Code
                     </span>
                     <input
                       type="text"
@@ -598,8 +700,8 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                         setJoinCode(e.target.value.toUpperCase());
                         setJoinError(null);
                       }}
-                      maxLength={8}
-                      placeholder="RD-XXXX"
+                      maxLength={15}
+                      placeholder="RU-XXXXXXXXXXXX"
                       className="w-full bg-slate-50 border-2 border-black rounded-lg py-2.5 text-center text-lg font-black tracking-widest uppercase font-mono focus:outline-none focus:bg-white"
                     />
                     {joinError && (
@@ -628,6 +730,29 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                       </>
                     )}
                   </button>
+
+                  {onOpenShare && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenShare(joinCode)}
+                      disabled={!joinCode.trim()}
+                      className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Share Convoy Invite Link (WhatsApp)</span>
+                    </button>
+                  )}
+
+                  <div className="pt-1 flex items-center justify-between text-[9px] font-mono text-slate-500">
+                    <span>Host server:</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('garage')}
+                      className="text-[#2563eb] hover:underline font-bold"
+                    >
+                      {getApiBaseUrl()}
+                    </button>
+                  </div>
                 </form>
               )}
 
@@ -802,7 +927,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
 
               {/* Rider Account & Cloud Sync Card */}
               {authUser ? (
-                <div className="bg-white border-2 border-black shadow-[2px_2px_0px_#000] rounded-xl p-3 flex items-center justify-between">
+                <div className="bg-white border-2 border-black shadow-[2px_2px_0px_#000] rounded-xl p-3 flex items-center justify-between gap-2">
                   <div className="flex items-center space-x-2.5 truncate">
                     {authUser.picture ? (
                       <img src={authUser.picture} alt="" className="w-8 h-8 rounded-full border border-black shrink-0" />
@@ -821,17 +946,31 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                       <p className="text-[10px] text-slate-500 font-mono truncate">{authUser.email}</p>
                     </div>
                   </div>
-                  {onSignOut && (
-                    <button
-                      type="button"
-                      onClick={onSignOut}
-                      className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-[#ef4444] border border-black text-[10px] font-black flex items-center space-x-1 shrink-0 transition-colors"
-                      title="Sign Out"
-                    >
-                      <LogOut className="w-3 h-3" />
-                      <span>Sign Out</span>
-                    </button>
-                  )}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    {onChangePassword && authUser.provider !== 'google' && (
+                      <button type="button" onClick={onChangePassword} className="px-2 py-1 rounded-lg bg-slate-100 border border-black text-[9px] font-black">
+                        Change password
+                      </button>
+                    )}
+                    {onRevokeSessions && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Sign out this account on every device?')) {
+                            onRevokeSessions().catch((error) => alert(error.message));
+                          }
+                        }}
+                        className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-[#ef4444] border border-black text-[9px] font-black"
+                      >
+                        Sign out everywhere
+                      </button>
+                    )}
+                    {onSignOut && (
+                      <button type="button" onClick={onSignOut} className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-[#ef4444] border border-black text-[9px] font-black flex items-center justify-center gap-1">
+                        <LogOut className="w-3 h-3" /> Sign Out
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="bg-gradient-to-r from-blue-50 to-slate-50 border-2 border-black shadow-[2.5px_2.5px_0px_#000] rounded-xl p-3 flex items-center justify-between">
@@ -1030,6 +1169,190 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                   <span className="font-bold text-black">Real-Time WebRTC PTT</span>
                 </div>
               </div>
+
+              {/* Emergency ICE & Crash Detection (Pure Smartphone Software, $0) */}
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between pb-1.5 border-b border-black">
+                  <div className="flex items-center space-x-1.5 text-xs font-black uppercase tracking-wide">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>In-App Crash & Emergency SOS</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-black text-[8px] font-black uppercase">
+                    Sensor Active
+                  </span>
+                </div>
+
+                <p className="text-[10px] text-slate-600 font-bold leading-relaxed">
+                  Uses your phone's built-in accelerometer to detect sudden motorcycle impacts (&gt;3.8G). Automatically sounds a 30s helmet siren &amp; dispatches emergency SMS. Zero hardware needed.
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-slate-600 block mb-0.5">
+                      ICE Phone (SMS / WhatsApp)
+                    </label>
+                    <input
+                      type="tel"
+                      value={emergencyPhone}
+                      onChange={(e) => setEmergencyPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-black focus:outline-none focus:bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-slate-600 block mb-0.5">
+                      Blood Group
+                    </label>
+                    <select
+                      value={bloodGroup}
+                      onChange={(e) => setBloodGroup(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-black rounded-lg px-2 py-1.5 text-xs font-black text-black focus:outline-none focus:bg-white"
+                    >
+                      {['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'].map((bg) => (
+                        <option key={bg} value={bg}>{bg}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSaveIceInfo}
+                    className="py-2 px-3 rounded-xl bg-black hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center justify-center space-x-1"
+                  >
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span>Save ICE Info</span>
+                  </button>
+
+                  {onTestCrash && (
+                    <button
+                      type="button"
+                      onClick={onTestCrash}
+                      className="py-2 px-3 rounded-xl bg-[#ef4444] hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center justify-center space-x-1"
+                    >
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>Test Crash Siren</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Spoken Voice Prompts & Tactical Audio */}
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between pb-1.5 border-b border-black">
+                  <div className="flex items-center space-x-1.5 text-xs font-black uppercase tracking-wide">
+                    <Volume2 className="w-4 h-4 text-[#2563eb]" />
+                    <span>Tactical Voice Prompts (Earphones)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleSpokenPrompts}
+                    className={`px-2.5 py-0.5 rounded-full border-2 border-black text-[9px] font-black uppercase tracking-wider transition-colors ${
+                      spokenPrompts ? 'bg-emerald-400 text-black' : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {spokenPrompts ? 'ENABLED' : 'MUTED'}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-600 font-bold">
+                  Speaks convoy regroup notices, road hazard proximity warnings, and turns directly into your helmet earphones without cloud fees.
+                </p>
+              </div>
+
+              {/* Offline Map Pre-Caching for Mountains & Remote Ghats */}
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between pb-1.5 border-b border-black">
+                  <div className="flex items-center space-x-1.5 text-xs font-black uppercase tracking-wide">
+                    <Download className="w-4 h-4 text-[#2563eb]" />
+                    <span>Offline Map Tile Cache</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-slate-500">
+                    {cachedTileCount} Tiles Cached
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-600 font-bold">
+                  Pre-download OpenStreetMap satellite and highway corridor tiles so your map never turns blank in cellular dead-zones.
+                </p>
+                <button
+                  type="button"
+                  disabled={isCachingMap}
+                  onClick={handleDownloadOfflineRoute}
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-black font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  {isCachingMap ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#2563eb]" />
+                      <span>Caching Highway Tiles ({cacheProgress}%)...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 text-[#2563eb]" />
+                      <span>Pre-Cache Mumbai–Goa Corridor</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Backend Server & LAN IP Configuration */}
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between pb-1.5 border-b border-black">
+                  <div className="flex items-center space-x-1.5 text-xs font-black uppercase tracking-wide">
+                    <Server className="w-4 h-4 text-[#2563eb]" />
+                    <span>Backend Server & LAN IP</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetGarageServer}
+                    className="text-[9px] font-mono font-bold text-[#2563eb] hover:underline uppercase"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-600 block">
+                    Server Address (URL / LAN IP)
+                  </label>
+                  <div className="flex space-x-1.5">
+                    <input
+                      type="text"
+                      value={garageServerUrl}
+                      onChange={(e) => setGarageServerUrl(e.target.value)}
+                      placeholder="http://192.168.29.64:5001"
+                      className="flex-1 bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-black focus:outline-none focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveGarageServer}
+                      disabled={isTestingGarageServer}
+                      className="px-3 py-1.5 rounded-lg bg-black hover:bg-slate-900 text-white font-black text-xs uppercase border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all flex items-center space-x-1 disabled:opacity-50"
+                    >
+                      {isTestingGarageServer ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <span>Save & Test</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {garageServerStatus && (
+                  <div
+                    className={`p-2 rounded-lg border text-[10px] font-bold ${
+                      garageServerStatus.success
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                        : 'bg-red-50 border-red-500 text-red-700'
+                    }`}
+                  >
+                    {garageServerStatus.message}
+                  </div>
+                )}
+
+                <p className="text-[9px] text-slate-500 font-medium leading-tight">
+                  For devices on the same Wi-Fi, ensure your phone is connected to the same network as the host laptop. Default LAN IP is <span className="font-mono font-bold text-black">{DEFAULT_BACKEND_URL}</span>.
+                </p>
+              </div>
             </div>
           )}
 
@@ -1038,12 +1361,12 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {/* 3. PERSISTENT CLASSIC BOTTOM NAVIGATION BAR                           */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
-        <nav className="fixed sm:absolute bottom-0 left-0 right-0 h-16 bg-white border-t-2 border-black flex items-center justify-around px-2 shadow-[0_-3px_0px_#000] z-40 safe-pb">
+        <nav className="mobile-app-nav relative shrink-0 min-h-[68px] bg-white border-t-2 border-black flex items-center justify-around gap-1 px-2 pt-2 shadow-[0_-3px_0px_#000] z-40">
           {/* Tab 1: Ride */}
           <button
             type="button"
             onClick={() => setActiveTab('ride')}
-            className={`flex-1 h-11 flex flex-col items-center justify-center rounded-xl transition-all ${
+            className={`flex-1 min-h-12 flex flex-col items-center justify-center rounded-xl transition-all ${
               activeTab === 'ride'
                 ? 'bg-[#2563eb] text-white border-2 border-black shadow-[2px_2px_0px_#000] translate-y-[-2px]'
                 : 'text-slate-600 hover:text-black'
@@ -1057,7 +1380,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('squad')}
-            className={`flex-1 h-11 flex flex-col items-center justify-center rounded-xl transition-all ${
+            className={`flex-1 min-h-12 flex flex-col items-center justify-center rounded-xl transition-all ${
               activeTab === 'squad'
                 ? 'bg-[#ef4444] text-white border-2 border-black shadow-[2px_2px_0px_#000] translate-y-[-2px]'
                 : 'text-slate-600 hover:text-black'
@@ -1071,7 +1394,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('fuel')}
-            className={`flex-1 h-11 flex flex-col items-center justify-center rounded-xl transition-all ${
+            className={`flex-1 min-h-12 flex flex-col items-center justify-center rounded-xl transition-all ${
               activeTab === 'fuel'
                 ? 'bg-amber-400 text-black border-2 border-black shadow-[2px_2px_0px_#000] translate-y-[-2px]'
                 : 'text-slate-600 hover:text-black'
@@ -1085,7 +1408,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('garage')}
-            className={`flex-1 h-11 flex flex-col items-center justify-center rounded-xl transition-all ${
+            className={`flex-1 min-h-12 flex flex-col items-center justify-center rounded-xl transition-all ${
               activeTab === 'garage'
                 ? 'bg-black text-white border-2 border-black shadow-[2px_2px_0px_#000] translate-y-[-2px]'
                 : 'text-slate-600 hover:text-black'

@@ -1,21 +1,77 @@
-// API and Socket.IO Base URL resolver for Web, LAN & Native iOS/Android
+// API and Socket.IO Base URL resolver for Web, LAN & Native Android/iOS
 import { Capacitor } from '@capacitor/core';
 
+// Override at build time with VITE_BACKEND_URL for packaged native apps.
+export const DEFAULT_BACKEND_URL = import.meta.env.VITE_BACKEND_URL?.trim() || 'http://localhost:5001';
+
 export const getApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    // If running in web browser (Safari on iPhone, Chrome on Desktop)
-    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-      if (window.location.port === '5001') {
-        return window.location.origin;
+  // 1. User manual override (from in-app Server Settings)
+  if (typeof localStorage !== 'undefined') {
+    const customIp = localStorage.getItem('riders_backend_ip');
+    if (customIp && customIp.trim()) {
+      let clean = customIp.trim().replace(/\/$/, '');
+      if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+        clean = `http://${clean}`;
       }
-      // If served via Vite dev server on port 5173, point to backend port 5001 on the same machine
-      if (window.location.hostname && window.location.hostname !== '') {
-        return `http://${window.location.hostname}:5001`;
-      }
+      return clean;
     }
   }
 
-  // Native Capacitor fallback on iPhone / Android:
-  const customIp = typeof localStorage !== 'undefined' ? localStorage.getItem('riders_backend_ip') : null;
-  return customIp || 'http://localhost:5001';
+  // 2. Native apps use the configured deployment URL (or localhost for local development).
+  if (Capacitor.isNativePlatform()) {
+    return DEFAULT_BACKEND_URL;
+  }
+
+  // Web app and API are served through the same origin in development and production.
+  if (typeof window !== 'undefined') {
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+      return window.location.origin;
+    }
+  }
+
+  return DEFAULT_BACKEND_URL;
+};
+
+export const setApiBaseUrl = (newUrl: string): void => {
+  if (typeof localStorage === 'undefined') return;
+  const trimmed = newUrl.trim();
+  if (!trimmed) {
+    localStorage.removeItem('riders_backend_ip');
+    return;
+  }
+  let clean = trimmed.replace(/\/$/, '');
+  if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+    clean = `http://${clean}`;
+  }
+  localStorage.setItem('riders_backend_ip', clean);
+};
+
+export const testServerConnection = async (
+  targetUrl?: string
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  const base = (targetUrl || getApiBaseUrl()).replace(/\/$/, '');
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${base}/api/health`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, message: 'Server reached successfully!', data };
+    }
+    return { success: false, message: `Server error HTTP ${res.status}` };
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      return { success: false, message: 'Connection timed out (4s). Verify IP & Wi-Fi.' };
+    }
+    return {
+      success: false,
+      message: err?.message ? `Failed to connect: ${err.message}` : 'Cannot reach server'
+    };
+  }
 };
