@@ -314,11 +314,13 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
         {/* 1. PERSISTENT TOP APP BAR                                             */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         <header className="px-3.5 py-3 border-b-2 border-black bg-white relative flex items-center justify-center shrink-0 shadow-[0_2px_0px_#000] z-20 min-h-[48px]">
-          {/* Centered App Title with Red Underline Border */}
+          {/* Centered App Title in Neobrutalist Red Box */}
           <div className="flex items-center justify-center">
-            <h1 className="text-xs font-black uppercase tracking-wider text-black border-b-2 border-[#ef4444] pb-0.5 leading-none">
-              Riders United
-            </h1>
+            <div className="px-3 py-1 bg-[#ef4444] text-white border-2 border-black rounded-lg shadow-[2px_2px_0px_#000] flex items-center justify-center">
+              <h1 className="text-xs font-black uppercase tracking-wider text-white leading-none">
+                Riders United
+              </h1>
+            </div>
           </div>
 
           {/* Rider Identity Pill (Anchored to Right) */}
