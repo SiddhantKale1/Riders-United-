@@ -18,14 +18,12 @@ interface CreateJoinModalProps {
 }
 
 const PRESET_COLORS = [
-  '#f59e0b', // Amber / Gold
-  '#06b6d4', // Cyan
-  '#a855f7', // Purple
-  '#10b981', // Emerald
-  '#3b82f6', // Sapphire Blue
   '#ef4444', // Red
-  '#ec4899', // Pink
-  '#eab308'  // Yellow
+  '#2563eb', // Blue
+  '#000000', // Black
+  '#f59e0b', // Amber
+  '#10b981', // Emerald
+  '#8b5cf6'  // Purple
 ];
 
 export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
@@ -67,7 +65,7 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
     e.preventDefault();
     onUpdateProfile({ name, callsign, bikeModel, avatarColor, role });
     onCreateRide({
-      title: newTitle || 'Custom Motorcycle Convoy',
+      title: newTitle || 'Custom Convoy Route',
       leaderName: name,
       leaderBike: bikeModel,
       targetSpeed: Number(newTargetSpeed)
@@ -76,116 +74,117 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-3 sm:p-5 select-none animate-fadeIn">
-      <div className="glass-panel rounded-3xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col border border-white/10">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 sm:p-4 select-none animate-fadeIn">
+      {/* Neobrutalist Modal Window */}
+      <div className="bg-white text-black border-2 border-black rounded-xl max-w-md w-full shadow-[5px_5px_0px_#000] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 font-bold shadow-md">
+        <div className="p-3.5 border-b-2 border-black flex items-center justify-between bg-slate-50">
+          <div className="flex items-center space-x-2">
+            <div className="w-7 h-7 rounded bg-[#2563eb] text-white border border-black shadow-[1px_1px_0px_#000] flex items-center justify-center font-bold">
               <Bike className="w-4 h-4" />
             </div>
-            <h2 className="text-base font-bold text-slate-100">
+            <h2 className="text-xs font-black uppercase tracking-wide text-black">
               Riders United Station
             </h2>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white glass-button transition-colors"
+            className="p-1 rounded bg-white hover:bg-red-500 hover:text-white border border-black text-black transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-white/10 text-xs font-semibold">
+        <div className="flex border-b-2 border-black text-xs font-black">
           <button
             onClick={() => setTab('profile')}
-            className={`flex-1 py-2.5 text-center transition-colors flex items-center justify-center space-x-1.5 border-b-2 ${
+            className={`flex-1 py-2 text-center transition-colors flex items-center justify-center space-x-1 border-r-2 border-black ${
               tab === 'profile'
-                ? 'border-amber-400 text-amber-400 bg-white/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'bg-[#2563eb] text-white'
+                : 'bg-white text-black hover:bg-slate-100'
             }`}
           >
-            <User className="w-3.5 h-3.5" />
-            <span>Rider Profile</span>
+            <User className="w-3 h-3" />
+            <span>Profile</span>
           </button>
 
           <button
             onClick={() => setTab('join')}
-            className={`flex-1 py-2.5 text-center transition-colors flex items-center justify-center space-x-1.5 border-b-2 ${
+            className={`flex-1 py-2 text-center transition-colors flex items-center justify-center space-x-1 border-r-2 border-black ${
               tab === 'join'
-                ? 'border-amber-400 text-amber-400 bg-white/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'bg-[#ef4444] text-white'
+                : 'bg-white text-black hover:bg-slate-100'
             }`}
           >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Join Ride</span>
+            <LogIn className="w-3 h-3" />
+            <span>Join</span>
           </button>
 
           <button
             onClick={() => setTab('create')}
-            className={`flex-1 py-2.5 text-center transition-colors flex items-center justify-center space-x-1.5 border-b-2 ${
+            className={`flex-1 py-2 text-center transition-colors flex items-center justify-center space-x-1 ${
               tab === 'create'
-                ? 'border-amber-400 text-amber-400 bg-white/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'bg-[#2563eb] text-white'
+                : 'bg-white text-black hover:bg-slate-100'
             }`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create Ride</span>
+            <Plus className="w-3 h-3" />
+            <span>Create</span>
           </button>
         </div>
 
         {/* Tab Forms */}
-        <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
+        <div className="p-3.5 flex-1 overflow-y-auto">
           {tab === 'profile' && (
-            <form onSubmit={handleSaveProfile} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSaveProfile} className="space-y-2.5 text-xs">
               <div>
-                <label className="block text-slate-400 font-mono mb-1">RIDER NAME</label>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Rider Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                  className="w-full bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-black font-bold focus:outline-none focus:bg-white"
                   placeholder="e.g. Vikram Singh"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-mono mb-1">CALLSIGN / RADIO TAG</label>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Callsign / Radio Tag</label>
                 <input
                   type="text"
                   value={callsign}
                   onChange={(e) => setCallsign(e.target.value)}
-                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                  className="w-full bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-black font-bold focus:outline-none focus:bg-white"
                   placeholder="e.g. Thunder Lead"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-mono mb-1">MOTORCYCLE MODEL</label>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Motorcycle Model</label>
                 <input
                   type="text"
                   value={bikeModel}
                   onChange={(e) => setBikeModel(e.target.value)}
-                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                  className="w-full bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-black font-bold focus:outline-none focus:bg-white"
                   placeholder="e.g. Royal Enfield Himalayan 450"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-mono mb-1.5">MARKER COLOR</label>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Puck Color</label>
                 <div className="flex items-center space-x-2">
                   {PRESET_COLORS.map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setAvatarColor(c)}
-                      className={`w-7 h-7 rounded-full transition-transform ${
-                        avatarColor === c ? 'scale-125 ring-2 ring-white' : 'opacity-70 hover:opacity-100'
+                      className={`w-6 h-6 rounded-md border-2 border-black transition-transform ${
+                        avatarColor === c ? 'scale-125 shadow-[1px_1px_0px_#000]' : 'opacity-70'
                       }`}
                       style={{ backgroundColor: c }}
                     />
@@ -194,22 +193,28 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-400 font-mono mb-1">TACTICAL ROLE</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as RiderRole)}
-                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
-                >
-                  <option value="leader">Road Captain (Leader)</option>
-                  <option value="scout">Point Scout</option>
-                  <option value="rider">Pack Rider</option>
-                  <option value="sweeper">Tail Gunner (Sweeper)</option>
-                </select>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Role in Pack</label>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['leader', 'scout', 'rider', 'sweeper'] as RiderRole[]).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      className={`py-1 rounded text-[10px] font-black uppercase border border-black ${
+                        role === r
+                          ? 'bg-black text-white'
+                          : 'bg-slate-100 text-black hover:bg-slate-200'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider mt-4"
+                className="w-full py-2 mt-2 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
               >
                 Save Profile
               </button>
@@ -217,66 +222,64 @@ export const CreateJoinModal: React.FC<CreateJoinModalProps> = ({
           )}
 
           {tab === 'join' && (
-            <form onSubmit={handleJoin} className="space-y-4 text-xs">
+            <form onSubmit={handleJoin} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-400 font-mono mb-1.5">RIDE CHANNEL CODE</label>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">
+                  Enter Ride Channel Code
+                </label>
                 <input
                   type="text"
                   value={rideCode}
-                  onChange={(e) => setRideCode(e.target.value)}
-                  placeholder="e.g. MUM-GOA"
-                  className="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-3 py-3 text-center font-mono text-base font-bold text-amber-400 placeholder-slate-600 uppercase tracking-widest focus:outline-none focus:border-amber-400"
+                  onChange={(e) => setRideCode(e.target.value.toUpperCase())}
+                  className="w-full bg-slate-50 border-2 border-black rounded-lg px-2.5 py-2 text-center text-lg font-mono font-black tracking-widest text-black focus:outline-none focus:bg-white"
+                  placeholder="e.g. RIDERS-66"
                   required
                 />
-                <p className="text-[11px] text-slate-400 mt-2 text-center">
-                  Default room: <strong className="text-amber-400">MUM-GOA</strong> (Free & zero API keys needed)
-                </p>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider"
+                className="w-full py-2 rounded-lg bg-[#ef4444] hover:bg-red-600 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
               >
-                Join Ride Channel
+                Join Channel
               </button>
             </form>
           )}
 
           {tab === 'create' && (
-            <form onSubmit={handleCreate} className="space-y-3.5 text-xs">
+            <form onSubmit={handleCreate} className="space-y-2.5 text-xs">
               <div>
-                <label className="block text-slate-400 font-mono mb-1">RIDE EXPEDITION TITLE</label>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Convoy Title</label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Goa Monsoon Thunder Run"
-                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                  className="w-full bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-black font-bold focus:outline-none focus:bg-white"
+                  placeholder="e.g. Goa Coastal Weekend Run"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-mono mb-1">TARGET CONVOY SPEED (KM/H)</label>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">
+                  Target Speed (km/h)
+                </label>
                 <input
                   type="number"
                   value={newTargetSpeed}
                   onChange={(e) => setNewTargetSpeed(Number(e.target.value))}
-                  min={30}
-                  max={140}
-                  className="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                  className="w-full bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-black font-bold focus:outline-none focus:bg-white"
+                  min="30"
+                  max="160"
+                  required
                 />
-              </div>
-
-              <div className="p-3 glass-pill rounded-xl text-[11px] text-slate-400">
-                You will be designated as the <strong>Road Captain</strong> and a private ride code will be generated.
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider"
+                className="w-full py-2 mt-1 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
               >
-                Create Ride Lobby
+                Initialize Channel
               </button>
             </form>
           )}

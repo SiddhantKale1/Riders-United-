@@ -21,30 +21,32 @@ export const SpeedometerPill: React.FC<SpeedometerPillProps> = ({
   const isSpreadWarning = packSpreadMeters > 2500;
 
   return (
-    <div className="absolute bottom-4 left-4 z-30 pointer-events-auto select-none flex items-end space-x-2 animate-fadeIn">
-      {/* Google Maps Circular Speedometer Pill */}
-      <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 shadow-2xl flex items-center space-x-3 text-slate-100">
-        <div className="flex flex-col items-center justify-center bg-slate-950 rounded-xl px-3 py-1.5 border border-white/10 min-w-[64px]">
-          <span className="text-3xl font-black font-mono tracking-tight text-white leading-none">
+    <div className="absolute bottom-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] left-[max(0.875rem,env(safe-area-inset-left,0.875rem))] z-30 pointer-events-auto select-none flex items-end space-x-2 animate-fadeIn">
+      {/* Neobrutalist Red & Blue Speedometer Box */}
+      <div className="bg-white text-black border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-2 flex items-center space-x-2.5">
+        {/* Speed Number in Bold Red Block */}
+        <div className="flex flex-col items-center justify-center bg-[#ef4444] text-white rounded-lg px-2.5 py-1 border-2 border-black min-w-[56px] shadow-[1px_1px_0px_#000]">
+          <span className="text-2xl font-black font-mono tracking-tight leading-none text-white">
             {speed}
           </span>
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-            km/h
+          <span className="text-[8px] font-black uppercase tracking-widest text-red-100 mt-0.5">
+            KM/H
           </span>
         </div>
 
-        <div className="flex flex-col text-xs font-mono pr-2">
-          {/* Compass direction */}
-          <div className="flex items-center space-x-1 text-slate-400 text-[11px]">
-            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+        {/* Heading & Convoy Pack Spread */}
+        <div className="flex flex-col text-xs font-mono pr-1">
+          {/* Compass Direction */}
+          <div className="flex items-center space-x-1 text-black font-bold text-[11px]">
+            <Compass className="w-3.5 h-3.5 text-[#2563eb]" />
             <span>{heading}° {getCardinal(heading)}</span>
           </div>
 
           {/* Convoy Spread */}
-          <div className={`flex items-center space-x-1 text-[11px] font-bold mt-1 ${
-            isSpreadWarning ? 'text-red-400 animate-pulse' : 'text-emerald-400'
+          <div className={`flex items-center space-x-1 text-[10px] font-black mt-1 px-1.5 py-0.5 rounded border border-black ${
+            isSpreadWarning ? 'bg-red-100 text-[#ef4444] animate-pulse' : 'bg-blue-100 text-[#2563eb]'
           }`}>
-            <Shield className="w-3 h-3" />
+            <Shield className="w-2.5 h-2.5" />
             <span>{(packSpreadMeters / 1000).toFixed(1)} km pack</span>
           </div>
         </div>

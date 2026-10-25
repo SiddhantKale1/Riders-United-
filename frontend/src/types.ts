@@ -84,7 +84,7 @@ export interface RideChannel {
   description: string;
   leaderId: string;
   createdAt: number;
-  status: 'setup' | 'in-progress' | 'paused' | 'completed';
+  status: 'setup' | 'lobby' | 'in-progress' | 'active' | 'paused' | 'completed';
   targetSpeed: number;
   route: Waypoint[];
   riders: Rider[];

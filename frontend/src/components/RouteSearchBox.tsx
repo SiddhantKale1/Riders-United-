@@ -20,23 +20,23 @@ interface RouteSearchBoxProps {
 
 const PRESET_TOURS = [
   {
-    name: 'Mumbai ➔ Goa (NH 66 Coastal)',
-    start: { name: 'Gateway of India, Mumbai', lat: 18.9220, lng: 72.8347 },
+    name: 'Current Location ➔ Goa',
+    start: { name: 'My Current Location', lat: 18.9220, lng: 72.8347 },
     dest: { name: 'Baga Beach, Goa', lat: 15.5553, lng: 73.7517 }
   },
   {
-    name: 'Delhi ➔ Manali (Himalayan Run)',
-    start: { name: 'India Gate, New Delhi', lat: 28.6129, lng: 77.2295 },
+    name: 'Current Location ➔ Manali',
+    start: { name: 'My Current Location', lat: 28.6129, lng: 77.2295 },
     dest: { name: 'Mall Road, Manali', lat: 32.2396, lng: 77.1887 }
   },
   {
-    name: 'Bangalore ➔ Ooty (Nilgiri Ghats)',
-    start: { name: 'Vidhana Soudha, Bangalore', lat: 12.9797, lng: 77.5912 },
+    name: 'Current Location ➔ Ooty',
+    start: { name: 'My Current Location', lat: 12.9797, lng: 77.5912 },
     dest: { name: 'Ooty Lake, Tamil Nadu', lat: 11.4102, lng: 76.6950 }
   },
   {
-    name: 'Pune ➔ Mahabaleshwar',
-    start: { name: 'Shaniwar Wada, Pune', lat: 18.5196, lng: 73.8553 },
+    name: 'Current Location ➔ Mahabaleshwar',
+    start: { name: 'My Current Location', lat: 18.5196, lng: 73.8553 },
     dest: { name: 'Venna Lake, Mahabaleshwar', lat: 17.9237, lng: 73.6586 }
   }
 ];
@@ -48,12 +48,12 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
   isLeader = true
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [startQuery, setStartQuery] = useState('My Current Location');
+  const [startQuery, setStartQuery] = useState('');
   const [destQuery, setDestQuery] = useState('');
   const [selectedStart, setSelectedStart] = useState<{ name: string; lat: number; lng: number } | null>(
     currentGpsCoords
       ? { name: 'My Current Location', lat: currentGpsCoords.lat, lng: currentGpsCoords.lng }
-      : { name: 'Gateway of India, Mumbai', lat: 18.9220, lng: 72.8347 }
+      : { name: 'My Current Location', lat: 18.5204, lng: 73.8567 }
   );
   const [selectedDest, setSelectedDest] = useState<{ name: string; lat: number; lng: number } | null>(null);
 
@@ -65,7 +65,6 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
   const startDebounceRef = useRef<any>(null);
   const destDebounceRef = useRef<any>(null);
 
-  // Sync GPS coordinates if available
   useEffect(() => {
     if (currentGpsCoords && (!selectedStart || selectedStart.name === 'My Current Location')) {
       setSelectedStart({
@@ -76,7 +75,6 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
     }
   }, [currentGpsCoords]);
 
-  // Search places for Start
   const handleStartInputChange = (val: string) => {
     setStartQuery(val);
     setActiveInput('start');
@@ -94,7 +92,6 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
     }
   };
 
-  // Search places for Destination
   const handleDestInputChange = (val: string) => {
     setDestQuery(val);
     setActiveInput('dest');
@@ -113,61 +110,71 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
   };
 
   const handleApplyRoute = () => {
-    if (selectedStart && selectedDest) {
-      onRouteSelected(selectedStart, selectedDest);
+    const startPoint = (startQuery.trim() && selectedStart && selectedStart.name !== 'My Current Location')
+      ? selectedStart
+      : (currentGpsCoords
+        ? { name: 'My Current Location', lat: currentGpsCoords.lat, lng: currentGpsCoords.lng }
+        : selectedStart);
+
+    if (startPoint && selectedDest) {
+      onRouteSelected(startPoint, selectedDest);
       setIsOpen(false);
     }
   };
 
   const handleSelectPreset = (preset: typeof PRESET_TOURS[0]) => {
-    setSelectedStart(preset.start);
+    const startPt = currentGpsCoords
+      ? { name: 'My Current Location', lat: currentGpsCoords.lat, lng: currentGpsCoords.lng }
+      : { name: 'My Current Location', lat: preset.start.lat, lng: preset.start.lng };
+
+    setSelectedStart(startPt);
     setSelectedDest(preset.dest);
-    setStartQuery(preset.start.name);
-    setDestQuery(preset.dest.name);
-    onRouteSelected(preset.start, preset.dest);
+    setStartQuery(startPt.name);
+    setDestQuery(preset.dest.name.split(',')[0]);
+    onRouteSelected(startPt, preset.dest);
     setIsOpen(false);
   };
 
   return (
     <div className="relative pointer-events-auto select-none">
-      {/* Compact Google Maps-Style Search Pill (Header Bar) */}
+      {/* Neobrutalist Compact Search Pill */}
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="glass-pill rounded-2xl px-3.5 py-2 flex items-center space-x-2.5 text-xs text-slate-300 hover:text-white transition-all shadow-xl max-w-[280px] sm:max-w-xs group"
-          title="Search any destination or route anywhere in the world"
+          className="bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none rounded-lg px-2.5 py-1.5 flex items-center space-x-2 text-xs font-bold transition-all max-w-[260px] sm:max-w-xs group hover:bg-slate-50"
+          title="Search route or destination"
         >
-          <Search className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-          <span className="truncate font-medium text-slate-200">
-            {activeRouteSummary || 'Where to? (Search any route...)'}
+          <Search className="w-3.5 h-3.5 text-[#2563eb] shrink-0" />
+          <span className="truncate text-black">
+            {activeRouteSummary || 'Where to? (Search Route)'}
           </span>
-          <span className="px-1.5 py-0.5 rounded-md bg-white/10 text-[10px] text-amber-300 font-mono">
-            MAPS
+          <span className="px-1 py-0.2 rounded bg-[#2563eb] text-white text-[9px] font-black shrink-0">
+            NAV
           </span>
         </button>
       ) : (
-        /* Expanded Google Maps-Style Direction Drawer */
-        <div className="glass-panel rounded-3xl p-4 shadow-2xl border border-white/10 w-[90vw] sm:w-[420px] max-h-[85vh] flex flex-col text-slate-100 animate-fadeIn z-50">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+        /* Neobrutalist Expanded Direction Drawer */
+        <div className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-3.5 w-[92vw] sm:w-[380px] max-h-[85vh] flex flex-col animate-fadeIn z-50">
+          <div className="flex items-center justify-between pb-2.5 border-b-2 border-black mb-3">
             <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400">
-                <Navigation className="w-3.5 h-3.5" />
+              <div className="w-6 h-6 rounded bg-[#2563eb] text-white flex items-center justify-center border border-black shadow-[1px_1px_0px_#000]">
+                <Navigation className="w-3 h-3" />
               </div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
-                Route Anywhere (Turn-by-Turn)
+              <h3 className="text-xs font-black uppercase tracking-wider text-black">
+                Plan Route Anywhere
               </h3>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 rounded-xl text-slate-400 hover:text-white glass-button"
+              className="p-1 rounded bg-slate-100 hover:bg-red-500 hover:text-white border border-black text-black transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {/* Start Point Input */}
           <div className="relative mb-2">
-            <label className="block text-[10px] font-mono text-slate-400 mb-1 flex items-center justify-between">
+            <div className="flex items-center justify-between text-[10px] font-black text-slate-700 mb-1">
               <span>START LOCATION</span>
               {currentGpsCoords && (
                 <button
@@ -180,28 +187,28 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
                     });
                     setStartQuery('My Current Location');
                   }}
-                  className="text-emerald-400 hover:text-emerald-300 flex items-center space-x-1"
+                  className="text-[#2563eb] hover:underline flex items-center space-x-0.5"
                 >
                   <Compass className="w-3 h-3" />
-                  <span>Use My GPS</span>
+                  <span>Use GPS</span>
                 </button>
               )}
-            </label>
+            </div>
             <div className="relative flex items-center">
-              <span className="absolute left-3 text-emerald-400 text-xs font-bold">A</span>
+              <span className="absolute left-2.5 text-[#2563eb] text-xs font-black">A</span>
               <input
                 type="text"
                 value={startQuery}
                 onChange={(e) => handleStartInputChange(e.target.value)}
                 onFocus={() => setActiveInput('start')}
-                placeholder="Starting city, road, or GPS..."
-                className="w-full bg-slate-900/80 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                placeholder="My Current Location (GPS)"
+                className="w-full bg-slate-50 border-2 border-black rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-black font-mono font-bold focus:outline-none focus:bg-white placeholder:text-slate-500 placeholder:font-bold"
               />
             </div>
 
             {/* Start Suggestions */}
             {activeInput === 'start' && startSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 glass-panel rounded-2xl p-1.5 shadow-2xl z-50 max-h-48 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-lg p-1 z-50 max-h-44 overflow-y-auto">
                 {startSuggestions.map((item, idx) => (
                   <button
                     key={idx}
@@ -212,9 +219,9 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
                       setStartSuggestions([]);
                       setActiveInput(null);
                     }}
-                    className="w-full text-left p-2 rounded-xl text-xs hover:bg-white/10 text-slate-200 transition-colors flex items-start space-x-2 truncate"
+                    className="w-full text-left p-1.5 rounded hover:bg-blue-50 text-xs text-black transition-colors flex items-start space-x-1.5 truncate font-medium"
                   >
-                    <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <MapPin className="w-3.5 h-3.5 text-[#2563eb] shrink-0 mt-0.5" />
                     <span className="truncate">{item.name}</span>
                   </button>
                 ))}
@@ -224,40 +231,48 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
 
           {/* Destination Point Input */}
           <div className="relative mb-3">
-            <label className="block text-[10px] font-mono text-slate-400 mb-1">
-              DESTINATION (ANYWHERE IN THE WORLD)
+            <label className="block text-[10px] font-black text-slate-700 mb-1">
+              DESTINATION POINT
             </label>
             <div className="relative flex items-center">
-              <span className="absolute left-3 text-amber-400 text-xs font-bold">B</span>
+              <span className="absolute left-2.5 text-[#ef4444] text-xs font-black">B</span>
               <input
                 type="text"
                 value={destQuery}
                 onChange={(e) => handleDestInputChange(e.target.value)}
                 onFocus={() => setActiveInput('dest')}
-                placeholder="Destination city, beach, mountain pass..."
-                className="w-full bg-slate-900/80 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+                placeholder="Destination city, hill, highway..."
+                className="w-full bg-slate-50 border-2 border-black rounded-lg pl-7 pr-7 py-1.5 text-xs text-black font-mono font-bold focus:outline-none focus:bg-white"
               />
               {isLoading && (
-                <Loader2 className="absolute right-3 w-3.5 h-3.5 text-amber-400 animate-spin" />
+                <Loader2 className="absolute right-2.5 w-3.5 h-3.5 text-[#2563eb] animate-spin" />
               )}
             </div>
 
             {/* Destination Suggestions */}
             {activeInput === 'dest' && destSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 glass-panel rounded-2xl p-1.5 shadow-2xl z-50 max-h-48 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-lg p-1 z-50 max-h-44 overflow-y-auto">
                 {destSuggestions.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => {
+                      const startPt = (startQuery.trim() && selectedStart && selectedStart.name !== 'My Current Location')
+                        ? selectedStart
+                        : (currentGpsCoords
+                          ? { name: 'My Current Location', lat: currentGpsCoords.lat, lng: currentGpsCoords.lng }
+                          : (selectedStart || { name: 'My Current Location', lat: 18.5204, lng: 73.8567 }));
+
+                      setSelectedStart(startPt);
+                      setStartQuery(startPt.name);
                       setSelectedDest(item);
-                      setDestQuery(item.name);
+                      setDestQuery(item.name.split(',')[0]);
                       setDestSuggestions([]);
                       setActiveInput(null);
                     }}
-                    className="w-full text-left p-2 rounded-xl text-xs hover:bg-white/10 text-slate-200 transition-colors flex items-start space-x-2 truncate"
+                    className="w-full text-left p-1.5 rounded hover:bg-blue-50 text-xs text-black transition-colors flex items-start space-x-1.5 truncate font-medium"
                   >
-                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                    <MapPin className="w-3.5 h-3.5 text-[#ef4444] shrink-0 mt-0.5" />
                     <span className="truncate">{item.name}</span>
                   </button>
                 ))}
@@ -270,29 +285,29 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
             type="button"
             onClick={handleApplyRoute}
             disabled={!selectedStart || !selectedDest}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-500/20 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center space-x-2 mb-3"
+            className="w-full py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center space-x-1.5 mb-2.5"
           >
-            <span>Navigate Road Route</span>
+            <span>Navigate Route</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
 
           {/* Quick Preset Tours (1-Click) */}
-          <div className="pt-2 border-t border-white/10">
-            <span className="text-[10px] font-mono text-slate-400 flex items-center space-x-1 mb-2">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span>POPULAR CONVOY TOURS (1-CLICK)</span>
+          <div className="pt-2 border-t-2 border-black">
+            <span className="text-[9px] font-black text-slate-600 flex items-center space-x-1 mb-1.5 uppercase">
+              <Sparkles className="w-3 h-3 text-[#2563eb]" />
+              <span>POPULAR RIDE TOURS</span>
             </span>
 
-            <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto">
+            <div className="grid grid-cols-1 gap-1 max-h-32 overflow-y-auto">
               {PRESET_TOURS.map((tour, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => handleSelectPreset(tour)}
-                  className="text-left p-2 rounded-xl text-xs glass-button flex items-center justify-between text-slate-300 hover:text-white"
+                  className="text-left px-2 py-1.5 rounded bg-slate-50 hover:bg-blue-50 border border-black text-xs font-bold text-black flex items-center justify-between transition-colors"
                 >
-                  <span className="truncate font-medium">{tour.name}</span>
-                  <ArrowRight className="w-3 h-3 text-amber-400 shrink-0 ml-1" />
+                  <span className="truncate">{tour.name}</span>
+                  <ArrowRight className="w-3 h-3 text-[#2563eb] shrink-0 ml-1" />
                 </button>
               ))}
             </div>

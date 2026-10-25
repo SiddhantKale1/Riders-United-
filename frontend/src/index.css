@@ -2,117 +2,270 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
 }
 
 html, body, #root {
   width: 100%;
-  height: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #07090e;
-  color: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  background-color: #0b0f19;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Glassmorphism primitives */
-.glass-panel {
-  background: rgba(13, 17, 28, 0.72);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+/* ═══════════════════════════════════════════════════════════════════════
+   BASELINE UI: SAFE AREA INSET HELPERS (FOR NOTCHED PHONES & SAFARI URL BAR)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.safe-top {
+  top: max(0.875rem, env(safe-area-inset-top, 0.875rem));
 }
 
-.glass-pill {
-  background: rgba(18, 24, 38, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+.safe-bottom {
+  bottom: max(0.875rem, env(safe-area-inset-bottom, 0.875rem));
 }
 
-.glass-button {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.safe-left {
+  left: max(0.875rem, env(safe-area-inset-left, 0.875rem));
 }
 
-.glass-button:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+.safe-right {
+  right: max(0.875rem, env(safe-area-inset-right, 0.875rem));
 }
 
-.glass-button:active {
-  transform: scale(0.96);
-  background: rgba(255, 255, 255, 0.08);
+.safe-pt {
+  padding-top: max(1rem, env(safe-area-inset-top, 1rem));
+}
+
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+}
+
+.safe-pl {
+  padding-left: max(1rem, env(safe-area-inset-left, 1rem));
+}
+
+.safe-pr {
+  padding-right: max(1rem, env(safe-area-inset-right, 1rem));
+}
+
+/* Accessible focus ring for buttons & inputs */
+button:focus-visible, input:focus-visible {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 2px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   NEO-INDUSTRIAL & NEOBRUTALISM FOUNDATIONS (RED & BLUE SIGNAL PALETTE)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Card and Container Panels */
+.neo-box {
+  background-color: #ffffff;
+  color: #000000;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.neo-box-dark {
+  background-color: #0b0f19;
+  color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.neo-box-blue {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.neo-box-red {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+/* Small, Crisp, Visible Action Buttons */
+.neo-btn {
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  font-weight: 700;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
+  user-select: none;
+  cursor: pointer;
+}
+
+.neo-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #000000;
+}
+
+.neo-btn-blue {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  font-weight: 800;
+}
+
+.neo-btn-blue:hover {
+  background-color: #1d4ed8;
+}
+
+.neo-btn-blue:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #000000;
+}
+
+.neo-btn-red {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  font-weight: 800;
+}
+
+.neo-btn-red:hover {
+  background-color: #dc2626;
+}
+
+.neo-btn-red:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #000000;
+}
+
+.neo-btn-white {
+  background-color: #ffffff;
+  color: #000000;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  font-weight: 700;
+}
+
+.neo-btn-white:hover {
+  background-color: #f1f5f9;
+}
+
+.neo-btn-white:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #000000;
+}
+
+/* Badges & Chips */
+.neo-badge-red {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: 1.5px solid #000000;
+  font-weight: 800;
+}
+
+.neo-badge-blue {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: 1.5px solid #000000;
+  font-weight: 800;
+}
+
+.neo-badge-white {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1.5px solid #000000;
+  font-weight: 800;
+}
+
+/* Technical Neo-Industrial Accent Line */
+.neo-grid-lines {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f1f5f9;
+  border-left: 1px solid #000000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
+  background: #2563eb;
+  border: 1px solid #000000;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: #1d4ed8;
 }
 
-/* Leaflet Container & Clean Styling */
+/* Leaflet Container & Neobrutal Zoom Control */
 .leaflet-container {
   width: 100%;
   height: 100%;
-  background: #07090e !important;
+  background: #0b0f19 !important;
   font-family: inherit;
 }
 
 .leaflet-control-zoom {
-  border: none !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
-  border-radius: 16px !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+  border-radius: 8px !important;
   overflow: hidden;
-  background: rgba(15, 20, 32, 0.8) !important;
-  backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #ffffff !important;
+  margin-bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem)) !important;
+  margin-right: max(1rem, calc(env(safe-area-inset-right, 0px) + 1rem)) !important;
 }
 
 .leaflet-control-zoom a {
-  background-color: transparent !important;
-  color: #94a3b8 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  width: 36px !important;
-  height: 36px !important;
-  line-height: 36px !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-bottom: 2px solid #000000 !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 30px !important;
   font-size: 16px !important;
-  transition: all 0.2s ease;
+  font-weight: 900 !important;
+  transition: all 0.1s ease;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: none !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  color: #38bdf8 !important;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.leaflet-control-zoom a:active {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
 }
 
 /* Radio Breathing Glow for PTT */
 @keyframes ptt-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9);
   }
   70% {
-    box-shadow: 0 0 0 24px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 16px rgba(239, 68, 68, 0);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
@@ -120,18 +273,5 @@ html, body, #root {
 }
 
 .animate-ptt-pulse {
-  animation: ptt-pulse 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
-}
-
-@keyframes voice-wave {
-  0%, 100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
-.animate-voice-wave {
-  animation: voice-wave 0.8s infinite ease-in-out;
+  animation: ptt-pulse 1.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }

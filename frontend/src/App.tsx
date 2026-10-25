@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { LandingPage } from './components/LandingPage';
+import { StagingLobby } from './components/StagingLobby';
 import { MapView } from './components/MapView';
 import { GoogleMapsTurnCard } from './components/GoogleMapsTurnCard';
 import { GoogleMapsTopBar } from './components/GoogleMapsTopBar';
 import { SpeedometerPill } from './components/SpeedometerPill';
 import { GoogleMapsBottomBar } from './components/GoogleMapsBottomBar';
-import { HazardReportModal } from './components/HazardReportModal';
 import { FuelStopsModal } from './components/FuelStopsModal';
 import { ConvoyRoster } from './components/ConvoyRoster';
 import { RouteScheduleModal } from './components/RouteScheduleModal';
@@ -23,14 +24,19 @@ import {
 } from './types';
 import { socketService } from './services/socket';
 import { audioEffects } from './services/audioEffects';
-import { convoySimulation } from './services/simulationEngine';
 import { geolocationService } from './services/geolocationService';
 import { routingService } from './services/routingService';
 import { nativeMobile } from './services/nativeMobile';
 import { getApiBaseUrl } from './services/apiConfig';
 
+export type AppScreen = 'landing' | 'lobby' | 'cockpit';
+
 export function App() {
-  // Current user's profile
+  // Screen router: 'landing' | 'lobby' | 'cockpit'
+  const [screen, setScreen] = useState<AppScreen>('landing');
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+
+  // User Profile with LocalStorage Persistence
   const [profile, setProfile] = useState<{
     id: string;
     name: string;
@@ -38,36 +44,55 @@ export function App() {
     bikeModel: string;
     avatarColor: string;
     role: RiderRole;
-  }>({
-    id: 'rider-vikram',
-    name: 'Vikram Singh',
-    callsign: 'Thunder Lead',
-    bikeModel: 'Royal Enfield Himalayan 450',
-    avatarColor: '#f59e0b',
-    role: 'leader'
+  }>(() => {
+    try {
+      const saved = localStorage.getItem('riders_user_profile');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    const newId = `rider-${Math.random().toString(36).substring(2, 9)}`;
+    return {
+      id: newId,
+      name: 'Rider Vikram',
+      callsign: 'Thunder Lead',
+      bikeModel: 'Royal Enfield Himalayan 450',
+      avatarColor: '#ef4444',
+      role: 'leader'
+    };
   });
 
-  // State
+  const handleUpdateProfile = (updated: any) => {
+    setProfile((prev) => {
+      const next = { ...prev, ...updated };
+      try {
+        localStorage.setItem('riders_user_profile', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Active Ride & Telemetry State
   const [ride, setRide] = useState<RideChannel | null>(null);
   const [riders, setRiders] = useState<Rider[]>([]);
-  const [packSpreadMeters, setPackSpreadMeters] = useState<number>(1420);
+  const [packSpreadMeters, setPackSpreadMeters] = useState<number>(0);
   const [alerts, setAlerts] = useState<TacticalAlert[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  // Dynamic Route Anywhere State (OSRM + Nominatim)
+  // Navigation Route State
   const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null);
+  const activeRouteRef = React.useRef<ActiveRoute | null>(null);
+
+  useEffect(() => {
+    activeRouteRef.current = activeRoute;
+  }, [activeRoute]);
   const [customWaypoints, setCustomWaypoints] = useState<Waypoint[]>([]);
   const [currentGpsCoords, setCurrentGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isRideActive, setIsRideActive] = useState<boolean>(false);
 
-  // Controls & Modals
-  const [trackingMode, setTrackingMode] = useState<TrackingMode>('simulation');
-  const [cameraMode, setCameraMode] = useState<CameraMode>('convoy');
+  // Cockpit Controls & Modals
+  const [cameraMode, setCameraMode] = useState<CameraMode>('me');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [wakeLockActive, setWakeLockActive] = useState<boolean>(false);
-  const [isSimulating, setIsSimulating] = useState<boolean>(true);
-  const [simSpeed, setSimSpeed] = useState<number>(1);
-  const [voiceChannel, setVoiceChannel] = useState<string>('convoy-main');
+  const [voiceChannel, _setVoiceChannel] = useState<string>('convoy-main');
 
   const [activeSpeaker, setActiveSpeaker] = useState<{
     riderId: string;
@@ -76,49 +101,147 @@ export function App() {
   } | null>(null);
 
   const [isRosterOpen, setIsRosterOpen] = useState<boolean>(false);
-  const [isRouteOpen, setIsRouteOpen] = useState<boolean>(false);
+  const [_isRouteOpen, setIsRouteOpen] = useState<boolean>(false);
   const [isRideModalOpen, setIsRideModalOpen] = useState<boolean>(false);
-  const [isHazardModalOpen, setIsHazardModalOpen] = useState<boolean>(false);
   const [isFuelModalOpen, setIsFuelModalOpen] = useState<boolean>(false);
 
-  // Initialize Socket.io and Load Initial Ride
+  // Check URL query param for instant group join (e.g., ?code=RD-492)
+  const initialUrlCode = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const codeParam = params.get('code');
+      if (codeParam) return codeParam.toUpperCase();
+      const match = window.location.pathname.match(/\/join\/([A-Za-z0-9_-]+)/);
+      if (match) return match[1].toUpperCase();
+    }
+    return '';
+  }, []);
+
+  // Initialize Socket.io and Listeners
   useEffect(() => {
     nativeMobile.init();
     socketService.init();
 
-    // Listen to initial full state from backend
+    socketService.setOnConnectionStatusChange((status) => {
+      setIsConnected(status);
+    });
+
+    // Ride state snapshot
     socketService.setOnRideState((state: RideChannel) => {
       setRide(state);
-      setRiders(state.riders);
-      setAlerts(state.alerts);
-      setMessages(state.messages);
+      setRiders(state.riders || []);
+      setMessages(state.messages || []);
       if (state.activeRoute) {
         setActiveRoute(state.activeRoute);
-        convoySimulation.setCustomPath(state.activeRoute.coordinates, state.activeRoute.distanceKm);
+        activeRouteRef.current = state.activeRoute;
+      }
+
+      // Filter initial alerts against active route corridor (500m)
+      const routeCoords = state.activeRoute?.coordinates;
+      if (state.alerts && routeCoords && routeCoords.length > 0) {
+        const filtered = state.alerts.filter((a) =>
+          !['hazard', 'police', 'fuel', 'breakdown'].includes(a.type) ||
+          routingService.isHazardOnRoute(a.lat, a.lng, routeCoords, 500)
+        );
+        setAlerts(filtered);
+      } else {
+        setAlerts(state.alerts || []);
+      }
+
+      if (state.status === 'active' && screen === 'lobby') {
+        setScreen('cockpit');
+        setIsRideActive(true);
       }
     });
 
-    // Listen to telemetry updates
+    // Real-time telemetry updates from peer devices
     socketService.setOnTelemetry((riderId, telemetry) => {
       setRiders((prev) =>
-        prev.map((r) => (r.id === riderId ? { ...r, ...telemetry } : r))
+        prev.map((r) => (r.id === riderId ? { ...r, ...telemetry, lastPing: Date.now(), isOnline: true } : r))
       );
     });
 
-    socketService.setOnBatchTelemetry((batchRiders) => {
-      setRiders(batchRiders);
+    // Rider joined / left notifications
+    socketService.setOnRiderJoined(({ rider, ride: updatedRide, message }) => {
+      if (updatedRide) setRide(updatedRide);
+      setRiders((prev) => {
+        const filtered = prev.filter((r) => r.id !== rider.id);
+        return [...filtered, rider];
+      });
+      if (message) {
+        addChatMessage({
+          id: `sys-${Date.now()}`,
+          senderId: 'system',
+          senderName: 'Convoy System',
+          text: message,
+          timestamp: Date.now(),
+          type: 'system'
+        });
+      }
     });
 
-    // Listen to route updates from other riders/leader
+    socketService.setOnRiderLeft(({ riderId, ride: updatedRide, message }) => {
+      if (updatedRide) setRide(updatedRide);
+      setRiders((prev) =>
+        prev.map((r) => (r.id === riderId ? { ...r, isOnline: false } : r))
+      );
+      if (message) {
+        addChatMessage({
+          id: `sys-${Date.now()}`,
+          senderId: 'system',
+          senderName: 'Convoy System',
+          text: message,
+          timestamp: Date.now(),
+          type: 'system'
+        });
+      }
+    });
+
+    // Ride flag-off started
+    socketService.setOnRideStarted(({ ride: startedRide, message }) => {
+      setRide(startedRide);
+      setScreen('cockpit');
+      setIsRideActive(true);
+      if (message) {
+        addChatMessage({
+          id: `start-${Date.now()}`,
+          senderId: 'system',
+          senderName: 'Road Captain',
+          text: `🚩 ${message}`,
+          timestamp: Date.now(),
+          type: 'system'
+        });
+      }
+    });
+
+    // Ride completed / ended
+    socketService.setOnRideEnded(({ ride: endedRide, message }) => {
+      setRide(endedRide);
+      setIsRideActive(false);
+      setScreen('landing');
+      alert(message || 'The ride has ended. Returning to main menu.');
+    });
+
+    // Route updated by leader
     socketService.setOnRouteSet((newRoute: ActiveRoute, msg?: string) => {
       setActiveRoute(newRoute);
-      convoySimulation.setCustomPath(newRoute.coordinates, newRoute.distanceKm);
+      activeRouteRef.current = newRoute;
+      setRide((prev) => (prev ? { ...prev, activeRoute: newRoute } : prev));
+
+      // Re-filter alerts: immediately dismiss any alerts that are off the new route
+      setAlerts((prev) =>
+        prev.filter((a) =>
+          !['hazard', 'police', 'fuel', 'breakdown'].includes(a.type) ||
+          routingService.isHazardOnRoute(a.lat, a.lng, newRoute.coordinates, 500)
+        )
+      );
+
       audioEffects.playAlertSound('regroup');
       if (msg) {
         addChatMessage({
           id: `route-${Date.now()}`,
           senderId: 'system',
-          senderName: 'Convoy Navigation',
+          senderName: 'Navigation',
           text: msg,
           timestamp: Date.now(),
           type: 'system'
@@ -126,8 +249,25 @@ export function App() {
       }
     });
 
-    // Listen to alerts
+    // Tactical Alert broadcast (Strictly filtered by active route corridor)
     socketService.setOnAlert((newAlert, msg) => {
+      const currentRoute = activeRouteRef.current;
+      const isSpatialHazard = ['hazard', 'police', 'fuel', 'breakdown'].includes(newAlert.type);
+      const hasRoute = Boolean(currentRoute && currentRoute.coordinates && currentRoute.coordinates.length > 0);
+
+      // Check if hazard is within 500 meters corridor of our active route
+      const isOnRoute = !hasRoute || !isSpatialHazard
+        ? true
+        : routingService.isHazardOnRoute(newAlert.lat, newAlert.lng, currentRoute?.coordinates, 500);
+
+      // IF NOT ON ROUTE: DO NOT trigger alert chime, DO NOT show banner, DO NOT notify rider!
+      if (!isOnRoute) {
+        console.log(`[Riders United] Hazard "${newAlert.title}" is off your active route corridor. Alert suppressed.`);
+        return;
+      }
+
+      // On-route hazard: play audio alert chime and show banner
+      audioEffects.playAlertSound(newAlert.type);
       setAlerts((prev) => [newAlert, ...prev.filter((a) => a.id !== newAlert.id)]);
       if (msg) {
         addChatMessage({
@@ -145,7 +285,7 @@ export function App() {
       setAlerts((prev) => prev.filter((a) => a.id !== alertId));
     });
 
-    // Listen to incoming voice
+    // PTT Voice Comms
     socketService.setOnVoiceIncomingStart(({ riderId, callsign }) => {
       setActiveSpeaker({ riderId, callsign });
       setRiders((prev) =>
@@ -160,12 +300,10 @@ export function App() {
       );
     });
 
-    // Listen to chat
     socketService.setOnChat((msg) => {
       addChatMessage(msg);
     });
 
-    // Listen to role changes
     socketService.setOnRoleChanged(({ riderId, newRole, message }) => {
       setRiders((prev) =>
         prev.map((r) => (r.id === riderId ? { ...r, role: newRole as RiderRole } : r))
@@ -174,112 +312,240 @@ export function App() {
         addChatMessage({
           id: `msg-${Date.now()}`,
           senderId: 'system',
-          senderName: 'System',
+          senderName: 'Convoy System',
           text: message,
           timestamp: Date.now(),
           type: 'system'
         });
       }
     });
-
-    // Attempt to join default ride MUM-GOA
-    socketService.joinRide('MUM-GOA', profile);
-
-    // Fetch initial HTTP snapshot
-    fetch(`${getApiBaseUrl()}/api/rides/MUM-GOA`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.code) {
-          setRide(data);
-          setRiders(data.riders);
-          setAlerts(data.alerts || []);
-          setMessages(data.messages || []);
-          if (data.activeRoute) {
-            setActiveRoute(data.activeRoute);
-            convoySimulation.setCustomPath(data.activeRoute.coordinates, data.activeRoute.distanceKm);
-          }
-        }
-      })
-      .catch(() => {
-        const initialSimRiders = convoySimulation.getRiders();
-        setRiders(initialSimRiders);
-      });
   }, []);
 
-  // Connect Simulation Engine
+  // Connect Real Phone GPS Tracking (Zero Bots)
   useEffect(() => {
-    convoySimulation.setOnUpdate((simRiders, spread) => {
-      if (trackingMode === 'simulation') {
-        setRiders(simRiders);
-        setPackSpreadMeters(spread);
-        socketService.sendBatchTelemetry(simRiders);
-      }
-    });
+    geolocationService.setOnPositionUpdate((pos) => {
+      setCurrentGpsCoords({ lat: pos.lat, lng: pos.lng });
 
-    convoySimulation.setOnRadioChatter((chatter) => {
-      addChatMessage({
-        id: `radio-${Date.now()}`,
-        senderId: chatter.senderId,
-        senderName: chatter.senderId.replace('rider-', '').toUpperCase(),
-        text: `[RADIO] ${chatter.text}`,
-        timestamp: Date.now(),
-        type: 'radio_transcript'
-      });
-    });
+      const updateData: Partial<Rider> = {
+        lat: pos.lat,
+        lng: pos.lng,
+        heading: pos.heading,
+        speed: pos.speed,
+        altitude: pos.altitude,
+        battery: 95
+      };
 
-    if (trackingMode === 'simulation') {
-      convoySimulation.start();
-      setIsSimulating(true);
-    }
+      // Update local user rider state when in Cockpit or Lobby
+      if (screen === 'cockpit' || screen === 'lobby') {
+        setRiders((prev) => {
+          const exists = prev.some((r) => r.id === profile.id);
+          if (!exists) {
+            return [
+              ...prev,
+              {
+                ...profile,
+                ...updateData,
+                isOnline: true,
+                isTalking: false,
+                lastPing: Date.now(),
+                distanceFromLeader: 0,
+                distanceCoveredKm: 0,
+                channel: 'convoy-main'
+              } as Rider
+            ];
+          }
+          return prev.map((r) => (r.id === profile.id ? { ...r, ...updateData } : r));
+        });
 
-    return () => {
-      convoySimulation.pause();
-    };
-  }, [trackingMode]);
-
-  // Connect Real Device GPS if selected (Works anywhere in the world)
-  useEffect(() => {
-    if (trackingMode === 'device_gps') {
-      convoySimulation.pause();
-      setIsSimulating(false);
-
-      geolocationService.setOnPositionUpdate((pos) => {
-        setCurrentGpsCoords({ lat: pos.lat, lng: pos.lng });
-
-        const updateData: Partial<Rider> = {
-          lat: pos.lat,
-          lng: pos.lng,
-          heading: pos.heading,
-          speed: pos.speed,
-          altitude: pos.altitude,
-          battery: 94
-        };
-
-        setRiders((prev) =>
-          prev.map((r) => (r.id === profile.id ? { ...r, ...updateData } : r))
-        );
-
+        // Broadcast real GPS telemetry over Socket.IO to other riders
         socketService.sendTelemetry({
           riderId: profile.id,
           ...updateData
         });
-      });
+      }
+    });
 
-      geolocationService.startTracking();
-    } else {
-      geolocationService.stopTracking();
-    }
+    geolocationService.startTracking();
 
     return () => {
       geolocationService.stopTracking();
     };
-  }, [trackingMode, profile.id]);
+  }, [screen, profile]);
+
+  useEffect(() => {
+    if (screen === 'cockpit' || screen === 'lobby') {
+      geolocationService.requestWakeLock().then((active) => setWakeLockActive(active));
+    } else {
+      geolocationService.releaseWakeLock();
+      setWakeLockActive(false);
+    }
+  }, [screen]);
 
   const addChatMessage = (msg: ChatMessage) => {
     setMessages((prev) => [...prev.slice(-99), msg]);
   };
 
-  // Dynamic Route Selection Anywhere (Google Maps style)
+  // ══════════════════════════════════════════════════════════════════════
+  // ACTION HANDLERS
+  // ══════════════════════════════════════════════════════════════════════
+
+  // 1. Create a Ride Group
+  const handleCreateGroup = async (title: string, targetSpeed: number) => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/rides`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          leaderId: profile.id,
+          leaderName: profile.name,
+          leaderCallsign: profile.callsign,
+          leaderBike: profile.bikeModel,
+          leaderColor: profile.avatarColor,
+          targetSpeed
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to create ride room');
+      const data = await res.json();
+
+      setProfile((prev) => ({ ...prev, role: 'leader' }));
+      setRide(data.ride);
+      setRiders(data.ride.riders || []);
+      setAlerts([]);
+      setMessages(data.ride.messages || []);
+
+      socketService.joinRide(data.ride.code, { ...profile, role: 'leader' });
+      setScreen('lobby');
+    } catch (err: any) {
+      alert(`Could not create ride group: ${err.message}`);
+    }
+  };
+
+  // 2. Join a Ride Group via Code
+  const handleJoinGroup = async (code: string) => {
+    const formattedCode = code.trim().toUpperCase();
+    const res = await fetch(`${getApiBaseUrl()}/api/rides/${formattedCode}`);
+    if (!res.ok) {
+      throw new Error(`Convoy code "${formattedCode}" does not exist.`);
+    }
+
+    const data = await res.json();
+    setRide(data);
+    setRiders(data.riders || []);
+    setAlerts(data.alerts || []);
+    setMessages(data.messages || []);
+    if (data.activeRoute) setActiveRoute(data.activeRoute);
+
+    const isUserLeader = data.leaderId === profile.id;
+    const memberRole: RiderRole = isUserLeader ? 'leader' : 'rider';
+
+    socketService.joinRide(formattedCode, { ...profile, role: memberRole });
+
+    if (data.status === 'active') {
+      setScreen('cockpit');
+      setIsRideActive(true);
+    } else {
+      setScreen('lobby');
+    }
+  };
+
+  // 3. Start Solo Ride (No Group) - MANDATORY DESTINATION REQUIRED
+  const handleStartSoloRide = async (
+    startPoint: { name: string; lat: number; lng: number },
+    destPoint: { name: string; lat: number; lng: number }
+  ) => {
+    if (!destPoint || !destPoint.lat || !destPoint.lng) {
+      alert('Without putting a destination location, you cannot start the ride.');
+      return;
+    }
+
+    const routeRes = await routingService.calculateRoute([startPoint, destPoint]);
+    if (!routeRes) {
+      alert('Could not calculate driving route between these points. Please try another destination.');
+      return;
+    }
+
+    const startShort = startPoint.name.split(',')[0];
+    const destShort = destPoint.name.split(',')[0];
+
+    const fuelWaypoints: Waypoint[] = (routeRes.fuelStops || []).map((fs) => ({
+      id: fs.id,
+      name: fs.name,
+      lat: fs.lat,
+      lng: fs.lng,
+      type: 'fuel' as const,
+      description: fs.description,
+      distanceFromStartKm: fs.distanceFromStartKm
+    }));
+
+    const newActiveRoute: ActiveRoute = {
+      title: `${startShort} ➔ ${destShort}`,
+      startName: startPoint.name,
+      destName: destPoint.name,
+      coordinates: routeRes.coordinates,
+      distanceKm: routeRes.distanceKm,
+      durationMinutes: routeRes.durationMinutes,
+      maneuvers: routeRes.maneuvers,
+      summary: routeRes.summary,
+      fuelStops: fuelWaypoints
+    };
+
+    setActiveRoute(newActiveRoute);
+    activeRouteRef.current = newActiveRoute;
+
+    const newWaypoints: Waypoint[] = [
+      { id: 'wp-start', name: `${startShort} (Start)`, lat: startPoint.lat, lng: startPoint.lng, type: 'start' },
+      ...fuelWaypoints,
+      { id: 'wp-dest', name: `${destShort} (Destination)`, lat: destPoint.lat, lng: destPoint.lng, type: 'destination' }
+    ];
+    setCustomWaypoints(newWaypoints);
+
+    const soloId = `solo-${Math.random().toString(36).substring(2, 7)}`;
+    const soloRider: Rider = {
+      id: profile.id,
+      name: profile.name,
+      callsign: profile.callsign,
+      bikeModel: profile.bikeModel,
+      avatarColor: profile.avatarColor,
+      role: 'leader',
+      lat: currentGpsCoords?.lat || startPoint.lat,
+      lng: currentGpsCoords?.lng || startPoint.lng,
+      heading: 0,
+      speed: 0,
+      altitude: 0,
+      battery: 98,
+      isOnline: true,
+      isTalking: false,
+      lastPing: Date.now(),
+      distanceFromLeader: 0,
+      distanceCoveredKm: 0,
+      channel: 'solo'
+    };
+
+    const soloRide: RideChannel = {
+      id: soloId,
+      code: 'SOLO',
+      title: `${startShort} ➔ ${destShort}`,
+      description: 'Solo Motorcycle Navigation',
+      leaderId: profile.id,
+      createdAt: Date.now(),
+      status: 'active',
+      targetSpeed: 80,
+      activeRoute: newActiveRoute,
+      route: newWaypoints,
+      riders: [soloRider],
+      alerts: [],
+      messages: []
+    };
+
+    setRide(soloRide);
+    setRiders([soloRider]);
+    setIsRideActive(true);
+    setScreen('cockpit');
+  };
+
+  // Route Selection Anywhere (Nominatim + OSRM)
   const handleRouteSelected = async (
     start: { name: string; lat: number; lng: number },
     dest: { name: string; lat: number; lng: number }
@@ -293,7 +559,6 @@ export function App() {
     const startShort = start.name.split(',')[0];
     const destShort = dest.name.split(',')[0];
 
-    // Format real fuel stops along this specific route
     const fuelWaypoints: Waypoint[] = (routeRes.fuelStops || []).map((fs) => ({
       id: fs.id,
       name: fs.name,
@@ -317,189 +582,113 @@ export function App() {
     };
 
     setActiveRoute(newActiveRoute);
+    activeRouteRef.current = newActiveRoute;
 
-    // Dynamic Waypoints for the new route with Start, Fuel Stops & Destination
+    // Immediately filter existing alerts against the new route
+    setAlerts((prev) =>
+      prev.filter((a) =>
+        !['hazard', 'police', 'fuel', 'breakdown'].includes(a.type) ||
+        routingService.isHazardOnRoute(a.lat, a.lng, newActiveRoute.coordinates, 500)
+      )
+    );
+
     const newWaypoints: Waypoint[] = [
       { id: 'wp-start', name: `${startShort} (Start)`, lat: start.lat, lng: start.lng, type: 'start' },
       ...fuelWaypoints,
       { id: 'wp-dest', name: `${destShort} (Destination)`, lat: dest.lat, lng: dest.lng, type: 'destination' }
     ];
     setCustomWaypoints(newWaypoints);
+    setRide((prev) => (prev ? { ...prev, activeRoute: newActiveRoute, route: newWaypoints } : prev));
 
-    // Update simulation engine so all 5 bikes ride along this new route!
-    convoySimulation.setCustomPath(routeRes.coordinates, routeRes.distanceKm);
-
-    // Broadcast to all other riders in room over Socket.IO
     socketService.sendRouteSet(newActiveRoute);
-
-    // Play route audio chime
     audioEffects.playAlertSound('regroup');
 
     addChatMessage({
       id: `route-${Date.now()}`,
       senderId: profile.id,
       senderName: profile.callsign,
-      text: `🏁 Route Locked: ${startShort} ➔ ${destShort} (${routeRes.distanceKm} km, ~${Math.floor(routeRes.durationMinutes / 60)}h ${routeRes.durationMinutes % 60}m) • ⛽ ${fuelWaypoints.length} Fuel Stops added!`,
+      text: `🏁 Route Locked: ${startShort} ➔ ${destShort} (${routeRes.distanceKm} km, ~${Math.floor(routeRes.durationMinutes / 60)}h ${routeRes.durationMinutes % 60}m) • ⛽ ${fuelWaypoints.length} Fuel Pumps mapped!`,
       timestamp: Date.now(),
       type: 'system'
     });
   };
 
-  // Start Ride Handler: Zooms into start area & locks Satellite mode
-  const handleStartRide = () => {
+  // Leader Flags-Off the Ride - MANDATORY DESTINATION REQUIRED
+  const handleStartConvoyRide = () => {
+    if (!ride?.activeRoute || !ride.activeRoute.coordinates || ride.activeRoute.coordinates.length === 0) {
+      alert('Without putting a destination location, you cannot start the ride. Please set a destination first!');
+      return;
+    }
+    socketService.startConvoyRide();
     setIsRideActive(true);
-    nativeMobile.triggerEmergencyHaptic();
-    audioEffects.playAlertSound('regroup');
-    audioEffects.playMicKey();
-
-    // Start simulation along active route
-    convoySimulation.start();
-    setIsSimulating(true);
-
-    addChatMessage({
-      id: `ride-start-${Date.now()}`,
-      senderId: profile.id,
-      senderName: profile.callsign,
-      text: `🏁 RIDE STARTED by ${profile.callsign}! Locked in SATELLITE navigation mode & zoomed to start area. Pack ride safe!`,
-      timestamp: Date.now(),
-      type: 'system'
-    });
+    setScreen('cockpit');
   };
 
+  // Exit Cockpit / End Navigation
   const handleEndRide = () => {
-    setIsRideActive(false);
-    convoySimulation.pause();
-    setIsSimulating(false);
-
-    addChatMessage({
-      id: `ride-end-${Date.now()}`,
-      senderId: profile.id,
-      senderName: profile.callsign,
-      text: `🛑 RIDE COMPLETED. Convoy safely arrived.`,
-      timestamp: Date.now(),
-      type: 'system'
-    });
-  };
-
-  // Toggle Tracking Mode (Live GPS vs Sim)
-  const handleToggleTrackingMode = () => {
-    const nextMode = trackingMode === 'simulation' ? 'device_gps' : 'simulation';
-    setTrackingMode(nextMode);
-    if (nextMode === 'simulation') {
-      convoySimulation.start();
-      setIsSimulating(true);
-    } else {
-      convoySimulation.pause();
-      setIsSimulating(false);
+    if (confirm('Are you sure you want to exit navigation and return to the main lobby?')) {
+      if (ride && ride.leaderId === profile.id && ride.code !== 'SOLO') {
+        socketService.endConvoyRide();
+      }
+      setIsRideActive(false);
+      setScreen('landing');
     }
   };
 
-  // Toggle Sound SFX
+  const handleLeaveLobby = () => {
+    setRide(null);
+    setRiders([]);
+    setScreen('landing');
+  };
+
+  // Toggle Tracking Mode (Live GPS)
+  const handleToggleTrackingMode = () => {
+    // 100% Real GPS
+    alert('Using 100% Live Device GPS. Fake bot simulations are permanently disabled.');
+  };
+
+  // Sound / Audio SFX Toggle
   const handleToggleSound = () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
     audioEffects.setSoundEnabled(next);
   };
 
-  // Toggle Bike Handlebar Screen WakeLock
+  // Handle Screen WakeLock
   const handleToggleWakeLock = async () => {
     if (wakeLockActive) {
       geolocationService.releaseWakeLock();
       setWakeLockActive(false);
     } else {
-      const success = await geolocationService.requestWakeLock();
-      if (success) setWakeLockActive(true);
+      const ok = await geolocationService.requestWakeLock();
+      setWakeLockActive(ok);
     }
   };
 
-  // Simulation Controls
-  const handleToggleSimulation = () => {
-    if (isSimulating) {
-      convoySimulation.pause();
-      setIsSimulating(false);
-    } else {
-      convoySimulation.start();
-      setIsSimulating(true);
-    }
-  };
-
-  const handleChangeSimSpeed = (speed: number) => {
-    setSimSpeed(speed);
-    convoySimulation.setSpeedMultiplier(speed);
-  };
-
-  // Send Tactical Alert
+  // Trigger Road Hazard
   const handleTriggerAlert = (type: AlertType, title: string, detail: string) => {
-    const currentRider = riders.find((r) => r.id === profile.id) || riders[0];
-    const newAlert: Partial<TacticalAlert> = {
+    const alertData: Partial<TacticalAlert> = {
       type,
       title,
       detail,
-      lat: currentRider ? currentRider.lat : 18.2520,
-      lng: currentRider ? currentRider.lng : 73.2878,
+      lat: currentGpsCoords?.lat || 18.5204,
+      lng: currentGpsCoords?.lng || 73.8567,
       createdBy: profile.id,
-      creatorName: `${profile.name} (${profile.callsign})`
+      creatorName: profile.callsign
     };
-
-    socketService.sendAlert(newAlert);
+    socketService.sendAlert(alertData);
   };
 
   const handleDismissAlert = (alertId: string) => {
     socketService.dismissAlert(alertId);
-    setAlerts((prev) => prev.filter((a) => a.id !== alertId));
   };
 
-  // Role Assignment
-  const handleAssignRole = (riderId: string, newRole: RiderRole) => {
-    socketService.assignRole(riderId, newRole);
-    setRiders((prev) =>
-      prev.map((r) => (r.id === riderId ? { ...r, role: newRole } : r))
-    );
-  };
-
-  // Send Chat message
   const handleSendMessage = (text: string) => {
-    const msg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      senderId: profile.id,
-      senderName: `${profile.callsign} (${profile.name})`,
-      text,
-      timestamp: Date.now(),
-      type: 'chat'
-    };
-    socketService.sendChat(text, profile.id, `${profile.callsign} (${profile.name})`);
-    addChatMessage(msg);
+    socketService.sendChat(text, profile.id, `${profile.name} (${profile.callsign})`);
   };
 
-  // Trigger Regroup Chime (Leader action)
-  const handleTriggerRegroup = () => {
-    audioEffects.playAlertSound('regroup');
-    handleTriggerAlert('regroup', 'Convoy Regroup Signal', 'Lead rider requested immediate pack regroup');
-  };
-
-  // Join or Create Ride
-  const handleJoinRide = (code: string, riderInfo: any) => {
-    socketService.joinRide(code, { ...profile, ...riderInfo });
-  };
-
-  const handleCreateRide = (rideData: any) => {
-    fetch(`${getApiBaseUrl()}/api/rides`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(rideData)
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.ride) {
-          setRide(data.ride);
-          setRiders(data.ride.riders);
-          socketService.joinRide(data.ride.code, profile);
-        }
-      });
-  };
-
-  const handleFocusRider = (_riderId: string) => {
-    setCameraMode('free');
+  const handleAssignRole = (targetRiderId: string, newRole: RiderRole) => {
+    socketService.assignRole(targetRiderId, newRole);
   };
 
   const currentRider = useMemo(() => {
@@ -510,46 +699,76 @@ export function App() {
     ? customWaypoints
     : (ride ? ride.route : []);
 
-  const nextWaypoint = activeWaypoints.length > 1 ? activeWaypoints[1] : null;
-
-  const totalTripKm = activeRoute ? activeRoute.distanceKm : 550;
+  const totalTripKm = activeRoute ? activeRoute.distanceKm : 50;
   const distanceToDestinationKm = currentRider
     ? Math.max(0, Math.round(totalTripKm - (currentRider.distanceCoveredKm || 0)))
     : totalTripKm;
 
   const isLeader = profile.role === 'leader' || (ride && ride.leaderId === profile.id);
 
+  // ══════════════════════════════════════════════════════════════════════
+  // RENDER SCREENS
+  // ══════════════════════════════════════════════════════════════════════
+
+  // 1. Landing Page (Default Front Door)
+  if (screen === 'landing') {
+    return (
+      <LandingPage
+        currentProfile={profile}
+        onUpdateProfile={handleUpdateProfile}
+        onCreateGroup={handleCreateGroup}
+        onJoinGroup={handleJoinGroup}
+        onStartSoloRide={handleStartSoloRide}
+        isConnected={isConnected}
+        initialCode={initialUrlCode}
+        currentGpsCoords={currentGpsCoords}
+      />
+    );
+  }
+
+  // 2. Staging Lobby (Pre-ride Group Staging)
+  if (screen === 'lobby' && ride) {
+    return (
+      <StagingLobby
+        ride={ride}
+        currentRiderId={profile.id}
+        isLeader={Boolean(isLeader)}
+        onStartRide={handleStartConvoyRide}
+        onLeaveRide={handleLeaveLobby}
+        onRouteSelected={handleRouteSelected}
+        currentGpsCoords={currentGpsCoords}
+      />
+    );
+  }
+
+  // 3. Landscape Cockpit (Active Navigation)
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none text-slate-100">
-      {/* Fullscreen Interactive Leaflet Map */}
+    <div className="relative w-full h-dvh max-h-dvh overflow-hidden bg-[#0b0f19] font-sans select-none text-black">
+      {/* Fullscreen Interactive Leaflet Map (Satellite Imagery ONLY) */}
       <div className="absolute inset-0 w-full h-full z-0">
         <MapView
           riders={riders}
           waypoints={activeWaypoints}
-          alerts={alerts}
           currentRiderId={profile.id}
           cameraMode={cameraMode}
           onSetCameraMode={setCameraMode}
           activeRoutePath={activeRoute?.coordinates}
           isRideActive={isRideActive}
           startPoint={activeRoute && activeRoute.coordinates.length > 0 ? { lat: activeRoute.coordinates[0][0], lng: activeRoute.coordinates[0][1] } : null}
-          onMapClickReportAlert={(lat, lng) => {
-            handleTriggerAlert('hazard', 'Reported Hazard Pin', `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-          }}
         />
       </div>
 
-      {/* Top Left: Authentic Google Maps Turn-by-Turn Card */}
+      {/* Top Left: Neobrutalism Turn-by-Turn Card */}
       <GoogleMapsTurnCard
         currentManeuver={activeRoute?.maneuvers ? activeRoute.maneuvers[0] : null}
-        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Baga Beach, Goa'}
+        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Destination'}
         distanceToDestinationKm={distanceToDestinationKm}
       />
 
-      {/* Top Center & Right: Google Maps Search Anywhere & Quick Settings */}
+      {/* Top Center & Right: Search Route & Quick Settings */}
       <GoogleMapsTopBar
         ride={ride}
-        trackingMode={trackingMode}
+        trackingMode="device_gps"
         onToggleTrackingMode={handleToggleTrackingMode}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
@@ -560,40 +779,37 @@ export function App() {
         currentGpsCoords={currentGpsCoords}
         activeRouteSummary={activeRoute?.title}
         isLeader={Boolean(isLeader)}
-        alerts={alerts}
-        onDismissAlert={handleDismissAlert}
       />
 
-      {/* Bottom Left: Authentic Google Maps Speedometer & Convoy Spread Pill */}
+      {/* Bottom Left: Speedometer & Pack Spread */}
       <SpeedometerPill
-        speed={currentRider ? currentRider.speed : 78}
-        heading={currentRider ? currentRider.heading : 195}
+        speed={currentRider ? currentRider.speed : 0}
+        heading={currentRider ? currentRider.heading : 0}
         packSpreadMeters={packSpreadMeters}
       />
 
-      {/* Bottom Right: Authentic Google Maps Navigation Bar (ETA, PTT, Fuel, Hazard, Squad, Start/End) */}
+      {/* Bottom Right: Cockpit Navigation Bar */}
       <GoogleMapsBottomBar
-        durationMinutes={activeRoute?.durationMinutes || 480}
-        distanceKm={activeRoute?.distanceKm || 550}
-        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Baga Beach, Goa'}
+        durationMinutes={activeRoute?.durationMinutes || 45}
+        distanceKm={activeRoute?.distanceKm || 30}
+        destinationName={activeRoute ? activeRoute.destName.split(',')[0] : 'Destination'}
         isRideActive={isRideActive}
-        onStartRide={handleStartRide}
+        hasActiveRoute={Boolean(activeRoute && activeRoute.coordinates && activeRoute.coordinates.length > 0)}
+        onStartRide={() => {
+          if (!activeRoute) {
+            alert('Without putting a destination location, you cannot start navigation. Please search a destination.');
+            return;
+          }
+          setIsRideActive(true);
+        }}
         onEndRide={handleEndRide}
         onOpenRoster={() => setIsRosterOpen(true)}
-        onOpenAlerts={() => setIsHazardModalOpen(true)}
         onHighlightFuel={() => setIsFuelModalOpen(true)}
         ridersCount={riders.length}
         currentRiderId={profile.id}
         callsign={profile.callsign}
         activeSpeaker={activeSpeaker}
         channel={voiceChannel}
-      />
-
-      {/* 1-Tap Hazard Report Modal (Handlebar Safe) */}
-      <HazardReportModal
-        isOpen={isHazardModalOpen}
-        onClose={() => setIsHazardModalOpen(false)}
-        onTriggerAlert={handleTriggerAlert}
       />
 
       {/* Highway Fuel Stops Modal */}
@@ -606,7 +822,7 @@ export function App() {
         }}
       />
 
-      {/* Discord-style Convoy Roster & Voice Channels Drawer */}
+      {/* Convoy Roster & Comms Drawer */}
       <ConvoyRoster
         isOpen={isRosterOpen}
         onClose={() => setIsRosterOpen(false)}
@@ -616,31 +832,26 @@ export function App() {
         messages={messages}
         onSendMessage={handleSendMessage}
         onAssignRole={handleAssignRole}
-        onFocusRider={handleFocusRider}
-        onTriggerRegroup={handleTriggerRegroup}
+        onFocusRider={(_id) => setCameraMode('free')}
+        onTriggerRegroup={() => handleTriggerAlert('regroup', 'Convoy Regroup', 'Leader requested immediate pack regroup')}
       />
 
       {/* Route Schedule / Waypoints Modal */}
       <RouteScheduleModal
-        isOpen={isRouteOpen}
+        isOpen={_isRouteOpen}
         onClose={() => setIsRouteOpen(false)}
         waypoints={activeWaypoints}
-        onSelectWaypoint={(_wp) => {
-          setCameraMode('free');
-        }}
-        onJumpSimulation={(fraction) => {
-          convoySimulation.setProgress(fraction);
-        }}
+        onSelectWaypoint={(_wp) => setCameraMode('free')}
       />
 
-      {/* Profile & Ride Lobby Modal */}
+      {/* Profile & Lobby Settings Modal */}
       <CreateJoinModal
         isOpen={isRideModalOpen}
         onClose={() => setIsRideModalOpen(false)}
-        onJoinRide={handleJoinRide}
-        onCreateRide={handleCreateRide}
+        onJoinRide={(code) => handleJoinGroup(code)}
+        onCreateRide={(rideData) => handleCreateGroup(rideData.title, rideData.targetSpeed)}
         currentProfile={profile}
-        onUpdateProfile={(updated) => setProfile((prev) => ({ ...prev, ...updated }))}
+        onUpdateProfile={handleUpdateProfile}
       />
     </div>
   );

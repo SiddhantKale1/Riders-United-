@@ -4,7 +4,6 @@ import {
   Radio,
   Volume2,
   Users,
-  AlertTriangle,
   Play,
   X,
   Fuel
@@ -17,10 +16,10 @@ interface GoogleMapsBottomBarProps {
   distanceKm: number;
   destinationName: string;
   isRideActive: boolean;
+  hasActiveRoute?: boolean;
   onStartRide: () => void;
   onEndRide: () => void;
   onOpenRoster: () => void;
-  onOpenAlerts: () => void;
   onHighlightFuel: () => void;
   ridersCount: number;
   currentRiderId: string;
@@ -33,10 +32,10 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
   durationMinutes,
   distanceKm,
   isRideActive,
+  hasActiveRoute = true,
   onStartRide,
   onEndRide,
   onOpenRoster,
-  onOpenAlerts,
   onHighlightFuel,
   ridersCount,
   currentRiderId,
@@ -45,7 +44,7 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
   channel
 }) => {
   const [isTransmitting, setIsTransmitting] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
+  const [_audioLevel, setAudioLevel] = useState(0);
   const isTransmittingRef = useRef(false);
 
   useEffect(() => {
@@ -104,51 +103,43 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
 
   const isOtherRiderTalking = activeSpeaker !== null && activeSpeaker.riderId !== currentRiderId;
 
-  // Format arrival time
   const arrivalTime = new Date(Date.now() + durationMinutes * 60 * 1000).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit'
   });
 
   return (
-    <div className="absolute bottom-4 right-4 z-30 pointer-events-auto select-none flex items-center justify-end space-x-3 animate-fadeIn">
-      {/* Remote Speaker Alert Banner */}
+    <div className="absolute bottom-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] right-[max(0.875rem,env(safe-area-inset-right,0.875rem))] z-30 pointer-events-auto select-none flex items-center justify-end space-x-2 animate-fadeIn">
+      {/* Remote Speaker Banner */}
       {isOtherRiderTalking && (
-        <div className="absolute -top-12 right-0 bg-cyan-950/90 border border-cyan-400 text-cyan-200 px-3 py-1.5 rounded-full text-xs font-mono flex items-center space-x-2 shadow-xl animate-bounce">
-          <Volume2 className="w-4 h-4 text-cyan-400 animate-pulse" />
+        <div className="absolute -top-10 right-0 bg-[#ef4444] text-white border-2 border-black shadow-[2px_2px_0px_#000] px-2.5 py-1 rounded-lg text-xs font-black flex items-center space-x-1.5 animate-bounce">
+          <Volume2 className="w-3.5 h-3.5 text-white animate-pulse" />
           <span>
             <strong>{activeSpeaker.callsign}</strong> transmitting...
           </span>
         </div>
       )}
 
-      {/* Google Maps Authentic Bottom Navigation Bar */}
-      <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-2 sm:px-4 sm:py-2.5 shadow-2xl flex items-center space-x-3 sm:space-x-4 text-slate-100">
-        {/* Left: ETA, Time & Distance */}
-        <div className="flex flex-col justify-center pr-2 sm:pr-4 border-r border-white/10">
+      {/* Neobrutalist Bottom Navigation Bar (White, Red & Blue) */}
+      <div className="bg-white text-black border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-1.5 sm:px-3 sm:py-2 flex items-center space-x-2 sm:space-x-2.5">
+        {/* Left: ETA & Distance */}
+        <div className="flex flex-col justify-center pr-2 sm:pr-2.5 border-r-2 border-black">
           <div className="flex items-baseline space-x-1">
-            <span className="text-xl sm:text-2xl font-black text-emerald-400 font-sans tracking-tight leading-none">
+            <span className="text-lg sm:text-xl font-black text-[#2563eb] font-mono leading-none tracking-tight">
               {durationMinutes >= 60
-                ? `${Math.floor(durationMinutes / 60)} hr ${durationMinutes % 60} min`
-                : `${durationMinutes} min`}
+                ? `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`
+                : `${durationMinutes}m`}
             </span>
           </div>
-          <div className="text-[11px] font-mono text-slate-400 mt-1 flex items-center space-x-1.5">
+          <div className="text-[10px] font-mono font-bold text-slate-700 mt-0.5 flex items-center space-x-1">
             <span>{distanceKm} km</span>
             <span>•</span>
-            <span className="text-slate-300 font-semibold">{arrivalTime} arrival</span>
+            <span>{arrivalTime}</span>
           </div>
         </div>
 
-        {/* Center: Push-To-Talk Walkie-Talkie Button */}
+        {/* Center: Push-To-Talk Button (Visible, Compact, Punchy) */}
         <div className="relative flex items-center justify-center">
-          {isTransmitting && (
-            <div className="absolute w-16 h-16 rounded-full bg-red-500/40 animate-ping"></div>
-          )}
-          {isOtherRiderTalking && (
-            <div className="absolute w-16 h-16 rounded-full bg-cyan-500/30 animate-ping"></div>
-          )}
-
           <button
             onPointerDown={(e) => {
               e.preventDefault();
@@ -159,56 +150,49 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
               stopTalking();
             }}
             onContextMenu={(e) => e.preventDefault()}
-            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex flex-col items-center justify-center shadow-xl transition-all active:scale-95 touch-none ${
+            aria-label="Push To Talk Walkie Talkie Radio"
+            className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all touch-none ${
               isTransmitting
-                ? 'bg-gradient-to-tr from-red-600 to-rose-500 text-white ring-4 ring-red-400/30 shadow-red-500/50'
+                ? 'bg-[#ef4444] text-white animate-pulse'
                 : isOtherRiderTalking
-                ? 'bg-cyan-900 text-cyan-300 ring-2 ring-cyan-400'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/15'
+                ? 'bg-red-600 text-white'
+                : 'bg-[#2563eb] hover:bg-[#1d4ed8] text-white'
             }`}
             title="Hold to Talk (or Spacebar)"
           >
             {isTransmitting ? (
-              <Radio className="w-5 h-5 animate-pulse" />
+              <Radio className="w-4 h-4 animate-spin" />
             ) : (
-              <Mic className="w-5 h-5" />
+              <Mic className="w-4 h-4" />
             )}
-            <span className="text-[9px] font-black font-mono tracking-wider uppercase mt-0.5 leading-none">
+            <span className="text-[7.5px] font-black font-mono tracking-wider uppercase mt-0.5 leading-none">
               {isTransmitting ? 'LIVE' : 'PTT'}
             </span>
           </button>
         </div>
 
-        {/* Action Buttons: Fuel, Hazard, Squad */}
-        <div className="flex items-center space-x-1.5">
+        {/* Small, Visible Action Buttons (Fuel, Hazard, Squad) */}
+        <div className="flex items-center space-x-1">
           {/* Fuel Stops */}
           <button
             onClick={onHighlightFuel}
-            className="p-2 sm:px-2.5 sm:py-2 rounded-2xl bg-white/5 hover:bg-white/10 text-amber-400 transition-colors flex items-center space-x-1"
-            title="Highway Fuel Stations"
+            aria-label="View Highway Fuel Pumps"
+            className="h-8 px-2 rounded bg-white hover:bg-slate-100 text-black border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 font-bold text-xs transition-transform"
+            title="Highway Fuel Pumps"
           >
-            <Fuel className="w-4 h-4" />
-            <span className="text-xs font-semibold hidden md:inline">Fuel</span>
+            <Fuel className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden md:inline text-[11px]">Fuel</span>
           </button>
 
-          {/* Hazard */}
-          <button
-            onClick={onOpenAlerts}
-            className="p-2 sm:px-2.5 sm:py-2 rounded-2xl bg-white/5 hover:bg-white/10 text-rose-400 transition-colors flex items-center space-x-1"
-            title="Report Road Hazard"
-          >
-            <AlertTriangle className="w-4 h-4" />
-            <span className="text-xs font-semibold hidden md:inline">Hazard</span>
-          </button>
-
-          {/* Squad Riders Button */}
+          {/* Squad Riders */}
           <button
             onClick={onOpenRoster}
-            className="p-2 sm:px-2.5 sm:py-2 rounded-2xl bg-white/5 hover:bg-white/10 text-cyan-400 transition-colors flex items-center space-x-1"
-            title="View Convoy Pack"
+            aria-label="View Convoy Pack Squadron"
+            className="h-8 px-2 rounded bg-[#2563eb] hover:bg-blue-700 text-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 font-bold text-xs transition-transform"
+            title="Convoy Pack"
           >
-            <Users className="w-4 h-4" />
-            <span className="text-xs font-bold font-mono">{ridersCount}</span>
+            <Users className="w-3.5 h-3.5 text-white" />
+            <span className="font-mono text-[11px] font-black">{ridersCount}</span>
           </button>
         </div>
 
@@ -216,20 +200,32 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
         <div>
           {!isRideActive ? (
             <button
-              onClick={onStartRide}
-              className="px-4 py-2.5 rounded-2xl bg-[#1b873f] hover:bg-[#136f32] text-white font-black text-xs uppercase tracking-wider flex items-center space-x-1.5 shadow-lg shadow-emerald-600/30 active:scale-95 transition-all"
-              title="Start Navigation"
+              onClick={() => {
+                if (!hasActiveRoute) {
+                  alert('Please enter a destination to start ride navigation.');
+                  return;
+                }
+                onStartRide();
+              }}
+              aria-label="Start Navigation"
+              className={`h-8 px-2.5 rounded font-black text-xs uppercase tracking-wider border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 transition-transform ${
+                hasActiveRoute
+                  ? 'bg-[#2563eb] hover:bg-blue-700 text-white'
+                  : 'bg-slate-300 text-slate-600 cursor-not-allowed'
+              }`}
+              title={hasActiveRoute ? "Start Navigation" : "Destination required to start"}
             >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Start</span>
+              <Play className="w-3 h-3 fill-current" />
+              <span>{hasActiveRoute ? 'Start' : 'Set Dest'}</span>
             </button>
           ) : (
             <button
               onClick={onEndRide}
-              className="px-3 py-2.5 rounded-2xl bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider flex items-center space-x-1 shadow-md shadow-red-600/30 active:scale-95 transition-all"
+              aria-label="End Navigation"
+              className="h-8 px-2.5 rounded bg-[#ef4444] hover:bg-red-600 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 transition-transform"
               title="Exit Navigation"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
               <span>End</span>
             </button>
           )}

@@ -23,191 +23,12 @@ const io = new Server(server, {
   maxHttpBufferSize: 1e7 // 10 MB for voice packets
 });
 
-// Port configuration
 const PORT = process.env.PORT || 5001;
 
-// Default Mumbai to Goa Route Waypoints
-const DEFAULT_MUMBAI_GOA_ROUTE = [
-  { id: 'wp-1', name: 'Gateway of India, Mumbai (Start)', lat: 18.9220, lng: 72.8347, type: 'start', description: 'Convoy flag-off point' },
-  { id: 'wp-2', name: 'Panvel Junction (Regroup)', lat: 18.9894, lng: 73.1175, type: 'regroup', description: 'Toll plaza regroup & tyre pressure check' },
-  { id: 'wp-3', name: 'Kolad River Stretch', lat: 18.4234, lng: 73.1256, type: 'scenic', description: 'Kundalika river bridge' },
-  { id: 'wp-4', name: 'Mangaon Dhaba (Breakfast)', lat: 18.2520, lng: 73.2878, type: 'food', description: 'Misal Pav & Chai pitstop' },
-  { id: 'wp-5', name: 'Mahad Ghats Gateway', lat: 18.0833, lng: 73.4167, type: 'waypoint', description: 'Caution: Winding curves' },
-  { id: 'wp-6', name: 'Khed HP Petrol Pump', lat: 17.7167, lng: 73.3833, type: 'fuel', description: 'Refueling stop for all bikes' },
-  { id: 'wp-7', name: 'Chiplun Overlook (Lunch)', lat: 17.5323, lng: 73.5186, type: 'food', description: 'Vashishti River valley lunch halt' },
-  { id: 'wp-8', name: 'Sangameshwar Ghat Section', lat: 17.1895, lng: 73.5487, type: 'scenic', description: 'Scenic mountain curves' },
-  { id: 'wp-9', name: 'Hathkhamba Junction (Ratnagiri)', lat: 16.9902, lng: 73.3120, type: 'waypoint', description: 'Coastal highway connector' },
-  { id: 'wp-10', name: 'Rajapur IndianOil Fuel Station', lat: 16.6547, lng: 73.5167, type: 'fuel', description: 'Mandatory refuel point' },
-  { id: 'wp-11', name: 'Kankavli Tea Break', lat: 16.2667, lng: 73.7167, type: 'food', description: 'Quick refresh & hydration' },
-  { id: 'wp-12', name: 'Sawantwadi Woods Stretch', lat: 15.9056, lng: 73.8194, type: 'waypoint', description: 'Final highway sprint before Goa' },
-  { id: 'wp-13', name: 'Pernem Toll (Goa Border)', lat: 15.7198, lng: 73.7972, type: 'regroup', description: 'Goa border entry checkpoint' },
-  { id: 'wp-14', name: 'Baga Beach, North Goa (Finish)', lat: 15.5553, lng: 73.7517, type: 'destination', description: 'Victory halt! Beachside celebration' }
-];
-
-// In-Memory Rides Data Store
+// In-Memory Real Rides Data Store (NO FAKE BOTS)
 const rides = new Map();
 
-// Helper to initialize Mumbai to Goa ride
-function initDefaultRide() {
-  const code = 'MUM-GOA';
-  const ride = {
-    id: 'ride-mum-goa-default',
-    code: code,
-    title: 'Mumbai to Goa Thunder Run 2026',
-    description: '5-Bike Highway Convoy across NH 66 through Western Ghats to Baga Beach',
-    leaderId: 'rider-vikram',
-    createdAt: Date.now(),
-    status: 'in-progress',
-    targetSpeed: 75, // km/h
-    route: DEFAULT_MUMBAI_GOA_ROUTE,
-    riders: new Map([
-      ['rider-vikram', {
-        id: 'rider-vikram',
-        name: 'Vikram Singh',
-        callsign: 'Thunder Lead',
-        bikeModel: 'Royal Enfield Himalayan 450',
-        avatarColor: '#f59e0b', // Amber/Gold
-        role: 'leader',
-        lat: 18.2520,
-        lng: 73.2878,
-        heading: 172,
-        speed: 78,
-        altitude: 45,
-        battery: 92,
-        isOnline: true,
-        isTalking: false,
-        lastPing: Date.now(),
-        distanceFromLeader: 0,
-        distanceCoveredKm: 142.5,
-        channel: 'convoy-main'
-      }],
-      ['rider-priya', {
-        id: 'rider-priya',
-        name: 'Priya Nair',
-        callsign: 'Valkyrie Scout',
-        bikeModel: 'KTM 390 Adventure',
-        avatarColor: '#a855f7', // Purple
-        role: 'scout',
-        lat: 18.2610,
-        lng: 73.2860,
-        heading: 170,
-        speed: 82,
-        altitude: 47,
-        battery: 88,
-        isOnline: true,
-        isTalking: false,
-        lastPing: Date.now(),
-        distanceFromLeader: 110,
-        distanceCoveredKm: 143.6,
-        channel: 'convoy-main'
-      }],
-      ['rider-arjun', {
-        id: 'rider-arjun',
-        name: 'Arjun Mehta',
-        callsign: 'Ghost 03',
-        bikeModel: 'Kawasaki Ninja 650',
-        avatarColor: '#10b981', // Emerald
-        role: 'rider',
-        lat: 18.2480,
-        lng: 73.2890,
-        heading: 173,
-        speed: 76,
-        altitude: 44,
-        battery: 79,
-        isOnline: true,
-        isTalking: false,
-        lastPing: Date.now(),
-        distanceFromLeader: 450,
-        distanceCoveredKm: 142.0,
-        channel: 'convoy-main'
-      }],
-      ['rider-sameer', {
-        id: 'rider-sameer',
-        name: 'Sameer Khan',
-        callsign: 'Torque 04',
-        bikeModel: 'Triumph Scrambler 400X',
-        avatarColor: '#3b82f6', // Blue
-        role: 'rider',
-        lat: 18.2440,
-        lng: 73.2905,
-        heading: 174,
-        speed: 74,
-        altitude: 43,
-        battery: 84,
-        isOnline: true,
-        isTalking: false,
-        lastPing: Date.now(),
-        distanceFromLeader: 890,
-        distanceCoveredKm: 141.6,
-        channel: 'convoy-main'
-      }],
-      ['rider-rahul', {
-        id: 'rider-rahul',
-        name: 'Rahul Deshmukh',
-        callsign: 'Tail Sweeper',
-        bikeModel: 'BMW R 1250 GS',
-        avatarColor: '#06b6d4', // Cyan
-        role: 'sweeper',
-        lat: 18.2395,
-        lng: 73.2925,
-        heading: 172,
-        speed: 73,
-        altitude: 42,
-        battery: 95,
-        isOnline: true,
-        isTalking: false,
-        lastPing: Date.now(),
-        distanceFromLeader: 1420,
-        distanceCoveredKm: 141.0,
-        channel: 'convoy-main'
-      }]
-    ]),
-    alerts: [
-      {
-        id: 'alert-initial-1',
-        type: 'hazard',
-        title: 'Road Work Ahead',
-        detail: 'Single lane bridge repair near Mangaon bypass. Slow down.',
-        lat: 18.2410,
-        lng: 73.2910,
-        createdBy: 'rider-priya',
-        createdAt: Date.now() - 1000 * 60 * 5,
-        active: true
-      }
-    ],
-    messages: [
-      {
-        id: 'msg-1',
-        senderId: 'rider-vikram',
-        senderName: 'Vikram (Leader)',
-        text: 'Welcome to Riders United! Route is locked: Gateway to Baga Beach. Keep staggered formation.',
-        timestamp: Date.now() - 1000 * 60 * 15,
-        type: 'system'
-      },
-      {
-        id: 'msg-2',
-        senderId: 'rider-priya',
-        senderName: 'Priya (Scout)',
-        text: 'Road is clear after the Mangaon bend. Surface is dry, good grip.',
-        timestamp: Date.now() - 1000 * 60 * 8,
-        type: 'chat'
-      },
-      {
-        id: 'msg-3',
-        senderId: 'rider-rahul',
-        senderName: 'Rahul (Sweeper)',
-        text: 'Tail Gunner check. Convoy spacing is 1.4km. Pack is tight and riding safe.',
-        timestamp: Date.now() - 1000 * 60 * 3,
-        type: 'chat'
-      }
-    ]
-  };
-  rides.set(code, ride);
-}
-
-initDefaultRide();
-
-// Helper to serialize ride for JSON
+// Helper to serialize ride for JSON output
 function serializeRide(ride) {
   return {
     ...ride,
@@ -215,41 +36,79 @@ function serializeRide(ride) {
   };
 }
 
+// Generate human-friendly 6-character ride codes (e.g., "RD-492")
+function generateRideCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'RD-';
+  for (let i = 0; i < 3; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Haversine distance formula in meters
+function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Earth radius in meters
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
 // REST Endpoints
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), totalRides: rides.size });
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    totalActiveRides: rides.size
+  });
 });
 
+// List all active public rides
+app.get('/api/rides', (req, res) => {
+  const list = Array.from(rides.values()).map(serializeRide);
+  res.json({ rides: list });
+});
+
+// Check if a ride exists by code
 app.get('/api/rides/:code', (req, res) => {
   const code = req.params.code.toUpperCase();
   const ride = rides.get(code);
   if (!ride) {
-    return res.status(404).json({ error: 'Ride channel not found' });
+    return res.status(404).json({ error: 'Convoy channel not found' });
   }
   res.json(serializeRide(ride));
 });
 
+// Create a new real ride
 app.post('/api/rides', (req, res) => {
-  const { title, description, leaderName, leaderBike, targetSpeed, waypoints } = req.body;
-  const code = (req.body.code || Math.random().toString(36).substring(2, 8)).toUpperCase();
-
-  if (rides.has(code)) {
-    return res.status(400).json({ error: 'Ride code already exists' });
+  const { title, description, leaderName, leaderCallsign, leaderBike, leaderColor, targetSpeed } = req.body;
+  
+  let code = req.body.code ? req.body.code.toUpperCase() : generateRideCode();
+  while (rides.has(code)) {
+    code = generateRideCode();
   }
 
-  const leaderId = `rider-${uuidv4().substring(0, 8)}`;
+  const leaderId = req.body.leaderId || `rider-${uuidv4().substring(0, 8)}`;
   const leaderRider = {
     id: leaderId,
-    name: leaderName || 'Ride Leader',
-    callsign: 'Road Captain',
-    bikeModel: leaderBike || 'Adventure Tourer',
-    avatarColor: '#f59e0b',
+    name: leaderName || 'Ride Captain',
+    callsign: leaderCallsign || 'Thunder Lead',
+    bikeModel: leaderBike || 'Motorcycle',
+    avatarColor: leaderColor || '#ef4444',
     role: 'leader',
-    lat: waypoints && waypoints.length > 0 ? waypoints[0].lat : 18.9220,
-    lng: waypoints && waypoints.length > 0 ? waypoints[0].lng : 72.8347,
+    lat: 0,
+    lng: 0,
     heading: 0,
     speed: 0,
-    altitude: 10,
+    altitude: 0,
     battery: 100,
     isOnline: true,
     isTalking: false,
@@ -262,13 +121,14 @@ app.post('/api/rides', (req, res) => {
   const newRide = {
     id: `ride-${uuidv4()}`,
     code,
-    title: title || 'New Motorcycle Convoy',
-    description: description || 'United riders on the road',
+    title: title || `${leaderRider.name}'s Convoy`,
+    description: description || 'Live GPS motorcycle convoy',
     leaderId: leaderId,
     createdAt: Date.now(),
-    status: 'setup',
-    targetSpeed: targetSpeed || 70,
-    route: waypoints && waypoints.length > 0 ? waypoints : DEFAULT_MUMBAI_GOA_ROUTE,
+    status: 'lobby', // 'lobby' | 'active' | 'completed'
+    targetSpeed: Number(targetSpeed) || 75,
+    route: [],
+    activeRoute: null,
     riders: new Map([[leaderId, leaderRider]]),
     alerts: [],
     messages: [
@@ -276,7 +136,7 @@ app.post('/api/rides', (req, res) => {
         id: `msg-${uuidv4()}`,
         senderId: leaderId,
         senderName: 'System',
-        text: `Ride "${title || code}" created by ${leaderName}. Code: ${code}`,
+        text: `Convoy "${title || code}" established. Code: ${code}. Share this code with your group!`,
         timestamp: Date.now(),
         type: 'system'
       }
@@ -287,25 +147,25 @@ app.post('/api/rides', (req, res) => {
   res.json({ ride: serializeRide(newRide), leaderRider });
 });
 
-// Socket.io Realtime Telemetry & Audio Signaling
+// Socket.io Realtime Telemetry & Communications (Real Riders Only)
 io.on('connection', (socket) => {
   let currentRideCode = null;
   let currentRiderId = null;
 
   // Join Ride Channel
   socket.on('ride:join', ({ code, rider }) => {
-    code = (code || 'MUM-GOA').toUpperCase();
+    if (!code) return;
+    code = code.trim().toUpperCase();
     const ride = rides.get(code);
 
     if (!ride) {
-      socket.emit('ride:error', { message: 'Ride channel not found' });
+      socket.emit('ride:error', { message: `Convoy code "${code}" not found. Verify the code and try again.` });
       return;
     }
 
     currentRideCode = code;
     socket.join(code);
 
-    // If rider details provided
     if (rider && rider.id) {
       currentRiderId = rider.id;
       const existing = ride.riders.get(rider.id);
@@ -316,22 +176,50 @@ io.on('connection', (socket) => {
           ...rider,
           isOnline: true,
           lastPing: Date.now(),
-          distanceFromLeader: 0
+          distanceFromLeader: 0,
+          channel: 'convoy-main'
         });
       }
 
-      // Notify room
+      // Broadcast join notification to room
       io.to(code).emit('rider:joined', {
         rider: ride.riders.get(rider.id),
-        message: `${rider.name} joined the ride convoy!`
+        ride: serializeRide(ride),
+        message: `${rider.name} (${rider.callsign || 'Rider'}) joined the convoy!`
       });
     }
 
-    // Send complete current state to joining socket
+    // Send full current state to joining socket
     socket.emit('ride:state', serializeRide(ride));
   });
 
-  // Telemetry stream (GPS, speed, heading, battery, etc.)
+  // Start Ride (Leader flags off the convoy)
+  socket.on('ride:start', () => {
+    if (!currentRideCode) return;
+    const ride = rides.get(currentRideCode);
+    if (!ride) return;
+
+    ride.status = 'active';
+    io.to(currentRideCode).emit('ride:started', {
+      ride: serializeRide(ride),
+      message: 'Convoy flag-off! Safe riding, watch your mirrors.'
+    });
+  });
+
+  // End Ride (Leader terminates or archives ride)
+  socket.on('ride:end', () => {
+    if (!currentRideCode) return;
+    const ride = rides.get(currentRideCode);
+    if (!ride) return;
+
+    ride.status = 'completed';
+    io.to(currentRideCode).emit('ride:ended', {
+      ride: serializeRide(ride),
+      message: 'Ride complete! Good job pack.'
+    });
+  });
+
+  // Real GPS Telemetry stream from phone device
   socket.on('telemetry:update', (data) => {
     if (!currentRideCode) return;
     const ride = rides.get(currentRideCode);
@@ -351,9 +239,9 @@ io.on('connection', (socket) => {
       });
     }
 
-    // Calculate distance from leader
+    // Calculate real distance from leader
     const leader = ride.riders.get(ride.leaderId);
-    if (leader && rider.id !== leader.id && rider.lat && leader.lat) {
+    if (leader && rider.id !== leader.id && rider.lat && leader.lat && rider.lat !== 0 && leader.lat !== 0) {
       rider.distanceFromLeader = Math.round(calculateDistanceMeters(
         rider.lat, rider.lng, leader.lat, leader.lng
       ));
@@ -368,32 +256,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Batch simulation updates (for Mumbai to Goa simulated convoy)
-  socket.on('telemetry:batch', ({ updates }) => {
-    if (!currentRideCode) return;
-    const ride = rides.get(currentRideCode);
-    if (!ride || !Array.isArray(updates)) return;
-
-    const leader = ride.riders.get(ride.leaderId);
-
-    updates.forEach((u) => {
-      let r = ride.riders.get(u.id);
-      if (r) {
-        Object.assign(r, u, { lastPing: Date.now(), isOnline: true });
-        if (leader && r.id !== leader.id) {
-          r.distanceFromLeader = Math.round(calculateDistanceMeters(
-            r.lat, r.lng, leader.lat, leader.lng
-          ));
-        }
-      }
-    });
-
-    io.to(currentRideCode).emit('telemetry:batch_broadcast', {
-      riders: Array.from(ride.riders.values())
-    });
-  });
-
-  // Role Assignment (Road Captain, Sweeper, Scout, Rider)
+  // Assign Role (Leader, Sweeper, Scout, Rider)
   socket.on('ride:assign_role', ({ targetRiderId, newRole }) => {
     if (!currentRideCode) return;
     const ride = rides.get(currentRideCode);
@@ -401,7 +264,6 @@ io.on('connection', (socket) => {
 
     const rider = ride.riders.get(targetRiderId);
     if (rider) {
-      // If transferring leader role
       if (newRole === 'leader') {
         const oldLeader = ride.riders.get(ride.leaderId);
         if (oldLeader) oldLeader.role = 'rider';
@@ -436,7 +298,6 @@ io.on('connection', (socket) => {
 
   socket.on('voice:chunk', ({ riderId, audioBlobBase64, channel }) => {
     if (!currentRideCode) return;
-    // Broadcast raw audio chunk to peer riders in same channel
     socket.to(currentRideCode).emit('voice:incoming_chunk', {
       riderId,
       audioBlobBase64,
@@ -459,24 +320,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // WebRTC Audio Signaling (Mesh for ultra-low latency audio)
-  socket.on('webrtc:signal', ({ targetSocketId, signal, fromRiderId }) => {
-    if (targetSocketId) {
-      io.to(targetSocketId).emit('webrtc:signal', {
-        fromSocketId: socket.id,
-        fromRiderId,
-        signal
-      });
-    } else if (currentRideCode) {
-      socket.to(currentRideCode).emit('webrtc:signal', {
-        fromSocketId: socket.id,
-        fromRiderId,
-        signal
-      });
-    }
-  });
-
-  // Tactical Road Alerts (Hazard, Fuel, Police, Regroup, SOS)
+  // Tactical Road Alerts
   socket.on('alert:create', (alertData) => {
     if (!currentRideCode) return;
     const ride = rides.get(currentRideCode);
@@ -484,7 +328,7 @@ io.on('connection', (socket) => {
 
     const newAlert = {
       id: `alert-${uuidv4()}`,
-      type: alertData.type || 'hazard', // 'hazard' | 'fuel' | 'police' | 'sos' | 'regroup' | 'stop'
+      type: alertData.type || 'hazard',
       title: alertData.title,
       detail: alertData.detail,
       lat: alertData.lat,
@@ -516,7 +360,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Chat message in ride channel
+  // Chat message
   socket.on('chat:send', ({ text, senderId, senderName, type }) => {
     if (!currentRideCode) return;
     const ride = rides.get(currentRideCode);
@@ -537,25 +381,7 @@ io.on('connection', (socket) => {
     io.to(currentRideCode).emit('chat:broadcast', msg);
   });
 
-  // Route Waypoint addition or update
-  socket.on('route:add_waypoint', (waypoint) => {
-    if (!currentRideCode) return;
-    const ride = rides.get(currentRideCode);
-    if (!ride) return;
-
-    const wp = {
-      id: `wp-${uuidv4()}`,
-      ...waypoint
-    };
-    ride.route.push(wp);
-
-    io.to(currentRideCode).emit('route:updated', {
-      route: ride.route,
-      message: `New waypoint added: ${wp.name}`
-    });
-  });
-
-  // Set full custom route anywhere in the world
+  // Set real road route (synced from Leader)
   socket.on('route:set', (routeData) => {
     if (!currentRideCode) return;
     const ride = rides.get(currentRideCode);
@@ -564,7 +390,8 @@ io.on('connection', (socket) => {
     ride.activeRoute = routeData;
     io.to(currentRideCode).emit('route:set_broadcast', {
       activeRoute: routeData,
-      message: `Convoy route updated: ${routeData.title || 'Custom Route'}`
+      ride: serializeRide(ride),
+      message: `Convoy route updated: ${routeData.title || 'Road Route'}`
     });
   });
 
@@ -578,28 +405,13 @@ io.on('connection', (socket) => {
         rider.isTalking = false;
         io.to(currentRideCode).emit('rider:left', {
           riderId: currentRiderId,
+          ride: serializeRide(ride),
           message: `${rider.name} went offline.`
         });
       }
     }
   });
 });
-
-// Haversine distance formula in meters
-function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // Earth radius in meters
-  const phi1 = (lat1 * Math.PI) / 180;
-  const phi2 = (lat2 * Math.PI) / 180;
-  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
-  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
-
-  const a =
-    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
 
 // Serve frontend static build if available
 const distPath = path.resolve(__dirname, '../frontend/dist');
@@ -615,5 +427,5 @@ if (fs.existsSync(distPath)) {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🏍️ Riders United Server running on http://localhost:${PORT}`);
-  console.log(`📍 Mumbai to Goa default ride initialized with 5 convoy riders`);
+  console.log(`📡 Ready for real rider group creation & live GPS tracking (Zero Bots)`);
 });

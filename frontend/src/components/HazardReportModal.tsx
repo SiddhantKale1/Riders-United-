@@ -35,94 +35,88 @@ export const HazardReportModal: React.FC<HazardReportModalProps> = ({
     icon: React.ReactNode;
     title: string;
     subtitle: string;
-    color: string;
-    bgColor: string;
+    btnClass: string;
   }[] = [
     {
       type: 'hazard',
-      icon: <AlertTriangle className="w-6 h-6 text-amber-400" />,
+      icon: <AlertTriangle className="w-5 h-5 text-white" />,
       title: 'Road Hazard',
-      subtitle: 'Pothole / Debris / Oil on tarmac',
-      color: 'border-amber-500/40 hover:border-amber-400',
-      bgColor: 'bg-amber-500/10 hover:bg-amber-500/20'
-    },
-    {
-      type: 'police',
-      icon: <Siren className="w-6 h-6 text-cyan-400" />,
-      title: 'Police / Radar',
-      subtitle: 'Speed trap / Checkpoint ahead',
-      color: 'border-cyan-500/40 hover:border-cyan-400',
-      bgColor: 'bg-cyan-500/10 hover:bg-cyan-500/20'
-    },
-    {
-      type: 'fuel',
-      icon: <Fuel className="w-6 h-6 text-orange-400" />,
-      title: 'Fuel Pitstop',
-      subtitle: 'Request fuel stop at next pump',
-      color: 'border-orange-500/40 hover:border-orange-400',
-      bgColor: 'bg-orange-500/10 hover:bg-orange-500/20'
+      subtitle: 'Pothole / Debris / Oil slick',
+      btnClass: 'bg-[#ef4444] text-white hover:bg-red-600'
     },
     {
       type: 'sos',
-      icon: <OctagonAlert className="w-6 h-6 text-red-400" />,
+      icon: <OctagonAlert className="w-5 h-5 text-white" />,
       title: 'Emergency SOS',
-      subtitle: 'Immediate medical / safety help',
-      color: 'border-red-500/50 hover:border-red-400 ring-1 ring-red-500/30',
-      bgColor: 'bg-red-500/15 hover:bg-red-500/25'
+      subtitle: 'Medical or safety help',
+      btnClass: 'bg-black text-white hover:bg-slate-900'
+    },
+    {
+      type: 'police',
+      icon: <Siren className="w-5 h-5 text-white" />,
+      title: 'Police / Radar',
+      subtitle: 'Speed trap / Checkpoint',
+      btnClass: 'bg-[#2563eb] text-white hover:bg-blue-700'
+    },
+    {
+      type: 'fuel',
+      icon: <Fuel className="w-5 h-5 text-black" />,
+      title: 'Fuel Pitstop',
+      subtitle: 'Request petrol pump stop',
+      btnClass: 'bg-amber-400 text-black hover:bg-amber-500'
     },
     {
       type: 'breakdown',
-      icon: <Wrench className="w-6 h-6 text-purple-400" />,
+      icon: <Wrench className="w-5 h-5 text-white" />,
       title: 'Breakdown / Flat',
-      subtitle: 'Puncture / Mechanical failure',
-      color: 'border-purple-500/40 hover:border-purple-400',
-      bgColor: 'bg-purple-500/10 hover:bg-purple-500/20'
+      subtitle: 'Puncture / Mechanical halt',
+      btnClass: 'bg-slate-800 text-white hover:bg-slate-900'
     },
     {
       type: 'regroup',
-      icon: <RotateCcw className="w-6 h-6 text-blue-400" />,
+      icon: <RotateCcw className="w-5 h-5 text-white" />,
       title: 'Pack Regroup',
-      subtitle: 'Slow down and close pack spacing',
-      color: 'border-blue-500/40 hover:border-blue-400',
-      bgColor: 'bg-blue-500/10 hover:bg-blue-500/20'
+      subtitle: 'Slow down & close convoy gap',
+      btnClass: 'bg-[#2563eb] text-white hover:bg-blue-700'
     }
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-white/10 rounded-3xl p-5 w-full max-w-lg shadow-2xl text-slate-100 flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 animate-fadeIn">
+      {/* Neobrutalist Modal Box */}
+      <div className="bg-white text-black border-2 border-black rounded-xl p-4 w-full max-w-md shadow-[5px_5px_0px_#000] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+        <div className="flex items-center justify-between pb-2.5 border-b-2 border-black mb-3">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400">
-              <AlertTriangle className="w-4 h-4" />
+            <div className="w-6 h-6 rounded bg-[#ef4444] text-white border border-black shadow-[1px_1px_0px_#000] flex items-center justify-center">
+              <AlertTriangle className="w-3.5 h-3.5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold tracking-wide uppercase">Report Road Condition</h3>
-              <p className="text-[11px] text-slate-400 font-mono">Broadcasts instantly to all riders in convoy</p>
+              <h3 className="text-xs font-black tracking-wide uppercase text-black">Broadcast Road Hazard</h3>
+              <p className="text-[10px] text-slate-600 font-mono">1-tap broadcast to all riders</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white glass-button transition-colors"
+            className="p-1 rounded bg-slate-100 hover:bg-red-500 hover:text-white border border-black text-black transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* 1-Tap Hazard Grid (Landscape Handlebar Friendly) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {/* 1-Tap Hazard Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {HAZARD_OPTIONS.map((item) => (
             <button
               key={item.type}
               onClick={() => handleSelect(item.type, item.title, item.subtitle)}
-              className={`p-3.5 rounded-2xl border ${item.color} ${item.bgColor} flex flex-col items-center text-center transition-all active:scale-95 group shadow-lg`}
+              className={`p-2.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex flex-col items-center text-center transition-all ${item.btnClass}`}
             >
-              <div className="mb-2 p-2 rounded-xl bg-slate-950/60 group-hover:scale-110 transition-transform">
+              <div className="mb-1 p-1 rounded bg-black/20 border border-black/30">
                 {item.icon}
               </div>
-              <span className="font-bold text-xs text-white leading-tight mb-1">{item.title}</span>
-              <span className="text-[10px] text-slate-400 leading-tight">{item.subtitle}</span>
+              <span className="font-black text-xs leading-tight">{item.title}</span>
+              <span className="text-[9px] opacity-80 leading-tight mt-0.5">{item.subtitle}</span>
             </button>
           ))}
         </div>

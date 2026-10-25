@@ -241,6 +241,83 @@ class RoutingService {
 
     return `Continue on ${name}`;
   }
+
+  // Calculate minimum distance in meters from a location to the active road route
+  public getDistanceToRouteMeters(
+    lat: number,
+    lng: number,
+    routeCoordinates?: [number, number][]
+  ): number {
+    if (!routeCoordinates || routeCoordinates.length === 0) return Infinity;
+    if (routeCoordinates.length === 1) {
+      return this.haversineMeters(lat, lng, routeCoordinates[0][0], routeCoordinates[0][1]);
+    }
+
+    let minDistance = Infinity;
+
+    for (let i = 0; i < routeCoordinates.length - 1; i++) {
+      const p1 = routeCoordinates[i];
+      const p2 = routeCoordinates[i + 1];
+
+      const d = this.distToSegmentMeters(lat, lng, p1[0], p1[1], p2[0], p2[1]);
+      if (d < minDistance) {
+        minDistance = d;
+        if (minDistance < 20) break; // Direct hit on tarmac
+      }
+    }
+
+    return minDistance;
+  }
+
+  // Check if hazard coordinate is within the road corridor (default: 500m) of the route
+  public isHazardOnRoute(
+    lat: number,
+    lng: number,
+    routeCoordinates?: [number, number][],
+    corridorThresholdMeters: number = 500
+  ): boolean {
+    if (!routeCoordinates || routeCoordinates.length === 0) return true;
+    const dist = this.getDistanceToRouteMeters(lat, lng, routeCoordinates);
+    return dist <= corridorThresholdMeters;
+  }
+
+  private haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  private distToSegmentMeters(
+    pLat: number, pLng: number,
+    aLat: number, aLng: number,
+    bLat: number, bLng: number
+  ): number {
+    const midLatRad = (((aLat + bLat) / 2) * Math.PI) / 180;
+    const metersPerDegLat = 111132.92;
+    const metersPerDegLng = 111412.84 * Math.cos(midLatRad);
+
+    const px = (pLng - aLng) * metersPerDegLng;
+    const py = (pLat - aLat) * metersPerDegLat;
+    const bx = (bLng - aLng) * metersPerDegLng;
+    const by = (bLat - aLat) * metersPerDegLat;
+
+    const segLenSq = bx * bx + by * by;
+    if (segLenSq === 0) {
+      return Math.hypot(px, py);
+    }
+
+    const t = Math.max(0, Math.min(1, (px * bx + py * by) / segLenSq));
+    const projX = t * bx;
+    const projY = t * by;
+
+    return Math.hypot(px - projX, py - projY);
+  }
 }
 
 export const routingService = new RoutingService();

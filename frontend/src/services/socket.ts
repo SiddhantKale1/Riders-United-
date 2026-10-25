@@ -9,12 +9,11 @@ import { getApiBaseUrl } from './apiConfig';
 class SocketService {
   private socket: Socket | null = null;
   private connected: boolean = false;
-  private currentRideCode: string = 'MUM-GOA';
+  private currentRideCode: string | null = null;
 
   // Callbacks
   private onRideStateCallback: ((ride: RideChannel) => void) | null = null;
   private onTelemetryCallback: ((riderId: string, telemetry: Partial<Rider>) => void) | null = null;
-  private onBatchTelemetryCallback: ((riders: Rider[]) => void) | null = null;
   private onAlertCallback: ((alert: TacticalAlert, message?: string) => void) | null = null;
   private onAlertDismissedCallback: ((alertId: string) => void) | null = null;
   private onChatCallback: ((message: ChatMessage) => void) | null = null;
@@ -22,17 +21,20 @@ class SocketService {
   private onVoiceIncomingStartCallback: ((data: { riderId: string; callsign: string; channel: string }) => void) | null = null;
   private onVoiceIncomingStopCallback: ((data: { riderId: string; callsign: string; channel: string }) => void) | null = null;
   private onRouteSetCallback: ((route: any, message?: string) => void) | null = null;
+  private onRideStartedCallback: ((data: { ride: RideChannel; message: string }) => void) | null = null;
+  private onRideEndedCallback: ((data: { ride: RideChannel; message: string }) => void) | null = null;
+  private onRiderJoinedCallback: ((data: { rider: Rider; ride?: RideChannel; message: string }) => void) | null = null;
+  private onRiderLeftCallback: ((data: { riderId: string; ride?: RideChannel; message: string }) => void) | null = null;
   private onConnectionStatusChange: ((status: boolean) => void) | null = null;
 
   public init() {
     if (this.socket) return;
 
-    // Dynamic resolver: works on localhost, local Wi-Fi LAN, and Native iOS/Android
     const socketUrl = getApiBaseUrl();
 
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 15,
       reconnectionDelay: 1000
     });
 
@@ -56,16 +58,28 @@ class SocketService {
       if (this.onRideStateCallback) this.onRideStateCallback(ride);
     });
 
+    this.socket.on('rider:joined', (data) => {
+      if (this.onRiderJoinedCallback) this.onRiderJoinedCallback(data);
+    });
+
+    this.socket.on('rider:left', (data) => {
+      if (this.onRiderLeftCallback) this.onRiderLeftCallback(data);
+    });
+
+    this.socket.on('ride:started', (data) => {
+      audioEffects.playAlertSound('regroup');
+      if (this.onRideStartedCallback) this.onRideStartedCallback(data);
+    });
+
+    this.socket.on('ride:ended', (data) => {
+      if (this.onRideEndedCallback) this.onRideEndedCallback(data);
+    });
+
     this.socket.on('telemetry:broadcast', ({ riderId, telemetry }: { riderId: string; telemetry: Partial<Rider> }) => {
       if (this.onTelemetryCallback) this.onTelemetryCallback(riderId, telemetry);
     });
 
-    this.socket.on('telemetry:batch_broadcast', ({ riders }: { riders: Rider[] }) => {
-      if (this.onBatchTelemetryCallback) this.onBatchTelemetryCallback(riders);
-    });
-
     this.socket.on('alert:broadcast', ({ alert, message }: { alert: TacticalAlert; message: string }) => {
-      audioEffects.playAlertSound(alert.type);
       if (this.onAlertCallback) this.onAlertCallback(alert, message);
     });
 
@@ -101,21 +115,25 @@ class SocketService {
     });
   }
 
-  public sendRouteSet(routeData: any) {
-    this.emit('route:set', routeData);
-  }
-
   public joinRide(code: string, rider: Partial<Rider>) {
     this.currentRideCode = code.toUpperCase();
     this.emit('ride:join', { code: this.currentRideCode, rider });
   }
 
-  public sendTelemetry(data: Partial<Rider> & { riderId?: string }) {
-    this.emit('telemetry:update', data);
+  public startConvoyRide() {
+    this.emit('ride:start', {});
   }
 
-  public sendBatchTelemetry(updates: Partial<Rider>[]) {
-    this.emit('telemetry:batch', { updates });
+  public endConvoyRide() {
+    this.emit('ride:end', {});
+  }
+
+  public sendRouteSet(routeData: any) {
+    this.emit('route:set', routeData);
+  }
+
+  public sendTelemetry(data: Partial<Rider> & { riderId?: string }) {
+    this.emit('telemetry:update', data);
   }
 
   public sendAlert(alert: Partial<TacticalAlert>) {
@@ -146,8 +164,11 @@ class SocketService {
 
   // Setters for listeners
   public setOnRideState(cb: (ride: RideChannel) => void) { this.onRideStateCallback = cb; }
+  public setOnRiderJoined(cb: (data: any) => void) { this.onRiderJoinedCallback = cb; }
+  public setOnRiderLeft(cb: (data: any) => void) { this.onRiderLeftCallback = cb; }
+  public setOnRideStarted(cb: (data: any) => void) { this.onRideStartedCallback = cb; }
+  public setOnRideEnded(cb: (data: any) => void) { this.onRideEndedCallback = cb; }
   public setOnTelemetry(cb: (riderId: string, telemetry: Partial<Rider>) => void) { this.onTelemetryCallback = cb; }
-  public setOnBatchTelemetry(cb: (riders: Rider[]) => void) { this.onBatchTelemetryCallback = cb; }
   public setOnAlert(cb: (alert: TacticalAlert, message?: string) => void) { this.onAlertCallback = cb; }
   public setOnAlertDismissed(cb: (alertId: string) => void) { this.onAlertDismissedCallback = cb; }
   public setOnChat(cb: (message: ChatMessage) => void) { this.onChatCallback = cb; }
