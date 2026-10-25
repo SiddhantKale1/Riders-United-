@@ -6,7 +6,9 @@ import {
   X,
   Radio,
   Settings,
-  BellRing
+  BellRing,
+  Crown,
+  Bike
 } from 'lucide-react';
 import { Rider, RiderRole, ChatMessage } from '../types';
 
@@ -90,8 +92,9 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
       {/* Leader Actions */}
       {isLeader && (
         <div className="px-3 py-1.5 bg-red-50 border-b-2 border-black flex items-center justify-between text-xs shrink-0">
-          <span className="text-black font-black flex items-center space-x-1 text-[11px]">
-            <span>👑 LEAD CONTROLS</span>
+          <span className="text-black font-black flex items-center space-x-1.5 text-[11px]">
+            <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span>LEAD CONTROLS</span>
           </span>
           <button
             onClick={onTriggerRegroup}
@@ -169,10 +172,10 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
                         title="Focus on map"
                       >
                         <div
-                          className="w-7 h-7 rounded-md border border-black flex items-center justify-center font-black text-black text-xs shadow-[1px_1px_0px_#000] shrink-0"
+                          className="w-7 h-7 rounded-md border border-black flex items-center justify-center text-white shadow-[1px_1px_0px_#000] shrink-0"
                           style={{ backgroundColor: rider.avatarColor }}
                         >
-                          🏍️
+                          <Bike className="w-3.5 h-3.5 text-white" />
                         </div>
 
                         <div className="truncate">

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { Rider, Waypoint, TacticalAlert, CameraMode } from '../types';
 import { routingService } from '../services/routingService';
-import { Crosshair, Navigation } from 'lucide-react';
+import { Crosshair, Navigation, Crown } from 'lucide-react';
 
 interface MapViewProps {
   riders: Rider[];
@@ -149,23 +149,23 @@ export const MapView: React.FC<MapViewProps> = ({
     layer.clearLayers();
 
     waypoints.forEach((wp) => {
-      let icon = '📍';
+      let icon = 'WP';
       let bgClass = 'bg-white text-black';
 
       if (wp.type === 'start') {
-        icon = '🚩';
+        icon = 'A';
         bgClass = 'bg-[#2563eb] text-white';
       } else if (wp.type === 'destination') {
-        icon = '🏁';
+        icon = 'B';
         bgClass = 'bg-[#ef4444] text-white';
       } else if (wp.type === 'fuel') {
-        icon = '⛽';
+        icon = 'FUEL';
         bgClass = 'bg-amber-400 text-black';
       } else if (wp.type === 'food') {
-        icon = '☕';
+        icon = 'PIT';
         bgClass = 'bg-white text-black';
       } else if (wp.type === 'regroup') {
-        icon = '🔄';
+        icon = 'STOP';
         bgClass = 'bg-[#2563eb] text-white';
       }
 
@@ -173,7 +173,7 @@ export const MapView: React.FC<MapViewProps> = ({
         className: 'custom-wp-icon',
         html: `
           <div class="relative group cursor-pointer flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
-            <div class="w-7 h-7 rounded-md flex items-center justify-center text-xs font-black border-2 border-black shadow-[2px_2px_0px_#000] ${bgClass} transition-transform group-hover:scale-110">
+            <div class="px-1.5 h-6 rounded-md flex items-center justify-center text-[10px] font-black border-2 border-black shadow-[2px_2px_0px_#000] ${bgClass} transition-transform group-hover:scale-110">
               ${icon}
             </div>
             <div class="hidden group-hover:block absolute top-8 bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000] text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap z-50 pointer-events-none">
@@ -207,7 +207,7 @@ export const MapView: React.FC<MapViewProps> = ({
       const puckBg = isLeader ? '#ef4444' : isMe ? '#2563eb' : '#ffffff';
       const puckText = (isLeader || isMe) ? '#ffffff' : '#000000';
       const roleTag = isLeader
-        ? '<span class="absolute -top-1.5 -right-1.5 text-[8px] bg-yellow-400 text-black border border-black rounded px-0.5 font-black">👑</span>'
+        ? '<span class="absolute -top-1.5 -right-1.5 text-[7px] bg-yellow-400 text-black border border-black rounded px-0.5 font-black">LEAD</span>'
         : '';
 
       const talkingGlow = isTalking
@@ -285,7 +285,7 @@ export const MapView: React.FC<MapViewProps> = ({
           title={`Camera: ${cameraMode.toUpperCase()} (Click to toggle)`}
         >
           {cameraMode === 'convoy' && <Crosshair className="w-4 h-4 text-blue-600" />}
-          {cameraMode === 'leader' && <span className="text-[11px] leading-none">👑</span>}
+          {cameraMode === 'leader' && <Crown className="w-3.5 h-3.5 text-amber-500" />}
           {cameraMode === 'me' && <Navigation className="w-3.5 h-3.5 text-red-600" />}
           <span className="text-[7px] font-black uppercase text-black leading-none mt-0.5">
             {cameraMode === 'convoy' ? 'PACK' : cameraMode === 'leader' ? 'LEAD' : 'ME'}

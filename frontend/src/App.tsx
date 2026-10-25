@@ -212,7 +212,7 @@ export function App() {
           id: `start-${Date.now()}`,
           senderId: 'system',
           senderName: 'Road Captain',
-          text: `🚩 ${message}`,
+          text: message,
           timestamp: Date.now(),
           type: 'system'
         });
@@ -612,7 +612,7 @@ export function App() {
       id: `route-${Date.now()}`,
       senderId: profile.id,
       senderName: profile.callsign,
-      text: `🏁 Route Locked: ${startShort} ➔ ${destShort} (${routeRes.distanceKm} km, ~${Math.floor(routeRes.durationMinutes / 60)}h ${routeRes.durationMinutes % 60}m) • ⛽ ${fuelWaypoints.length} Fuel Pumps mapped!`,
+      text: `Route Locked: ${startShort} ➔ ${destShort} (${routeRes.distanceKm} km, ~${Math.floor(routeRes.durationMinutes / 60)}h ${routeRes.durationMinutes % 60}m) • ${fuelWaypoints.length} Fuel Pumps mapped!`,
       timestamp: Date.now(),
       type: 'system'
     });

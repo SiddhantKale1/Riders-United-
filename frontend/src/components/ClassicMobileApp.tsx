@@ -59,10 +59,10 @@ const PRESET_COLORS = [
 ];
 
 const POPULAR_RUNS = [
-  { name: '🏍️ Lonavala Ghats', query: 'Lonavala Ghats, Maharashtra', lat: 18.7557, lng: 73.4091 },
-  { name: '⛰️ Lavasa Ridge', query: 'Lavasa, Maharashtra', lat: 18.4102, lng: 73.5074 },
-  { name: '🌲 Mahabaleshwar Peak', query: 'Mahabaleshwar, Maharashtra', lat: 17.9237, lng: 73.6586 },
-  { name: '🌊 Marine Drive Coastal', query: 'Marine Drive, Mumbai', lat: 18.9438, lng: 72.8232 }
+  { name: 'Lonavala Ghats', query: 'Lonavala Ghats, Maharashtra', lat: 18.7557, lng: 73.4091 },
+  { name: 'Lavasa Ridge', query: 'Lavasa, Maharashtra', lat: 18.4102, lng: 73.5074 },
+  { name: 'Mahabaleshwar Peak', query: 'Mahabaleshwar, Maharashtra', lat: 17.9237, lng: 73.6586 },
+  { name: 'Marine Drive Coastal', query: 'Marine Drive, Mumbai', lat: 18.9438, lng: 72.8232 }
 ];
 
 export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
@@ -368,8 +368,8 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                     Satellite HUD • Speedometer • Corridor Fuel
                   </p>
                 </div>
-                <div className="w-9 h-9 rounded-lg bg-[#2563eb] text-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center font-bold text-sm">
-                  🏍️
+                <div className="w-9 h-9 rounded-lg bg-[#2563eb] text-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center font-bold">
+                  <Navigation className="w-4 h-4 text-white" />
                 </div>
               </div>
 
@@ -728,8 +728,8 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                     Scanned within 10 km corridor of your GPS
                   </p>
                 </div>
-                <div className="w-9 h-9 rounded-lg bg-amber-400 text-black border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center font-bold text-sm">
-                  ⛽
+                <div className="w-9 h-9 rounded-lg bg-amber-400 text-black border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center font-bold">
+                  <Fuel className="w-4 h-4 text-black" />
                 </div>
               </div>
 
@@ -761,7 +761,7 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                           {stop.description}
                         </p>
                         <span className="inline-block mt-1 px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-black text-[9px] font-mono font-black">
-                          📍 {stop.distanceFromStartKm} km away
+                          {stop.distanceFromStartKm} km away
                         </span>
                       </div>
 
@@ -808,10 +808,10 @@ export const ClassicMobileApp: React.FC<ClassicMobileAppProps> = ({
                   </p>
                 </div>
                 <div
-                  className="w-10 h-10 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center text-white text-base font-black shrink-0"
+                  className="w-10 h-10 rounded-xl border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center text-white shrink-0"
                   style={{ backgroundColor: profileColor }}
                 >
-                  🏍️
+                  <Bike className="w-5 h-5 text-white" />
                 </div>
               </div>
 

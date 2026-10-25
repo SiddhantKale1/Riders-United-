@@ -14,7 +14,8 @@ import {
   Loader2,
   Edit2,
   Crosshair,
-  ArrowRight
+  ArrowRight,
+  Bike
 } from 'lucide-react';
 import { RideChannel, Rider, RiderRole } from '../types';
 import { routingService, LocationSearchResult } from '../services/routingService';
@@ -129,7 +130,7 @@ export const StagingLobby: React.FC<StagingLobbyProps> = ({
 
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `🏍️ Join my motorcycle convoy "${ride.title}" on Riders United!\nRoom Code: ${ride.code}\nDirect Link: ${inviteUrl}`
+      `Join my motorcycle convoy "${ride.title}" on Riders United!\nRoom Code: ${ride.code}\nDirect Link: ${inviteUrl}`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
@@ -531,10 +532,10 @@ export const StagingLobby: React.FC<StagingLobbyProps> = ({
                     }`}
                   >
                     <div
-                      className="w-7 h-7 rounded border border-black shadow-[1px_1px_0px_#000] flex items-center justify-center text-white text-xs font-black shrink-0"
+                      className="w-7 h-7 rounded border border-black shadow-[1px_1px_0px_#000] flex items-center justify-center text-white shrink-0"
                       style={{ backgroundColor: r.avatarColor || '#2563eb' }}
                     >
-                      🏍️
+                      <Bike className="w-4 h-4 text-white" />
                     </div>
 
                     <div className="truncate flex-1 min-w-0">
