@@ -16,7 +16,8 @@ import {
   Loader2,
   X,
   Navigation,
-  Crosshair
+  Crosshair,
+  ArrowLeft
 } from 'lucide-react';
 import { RiderRole } from '../types';
 import { routingService, LocationSearchResult } from '../services/routingService';
@@ -37,6 +38,8 @@ interface LandingPageProps {
     start: { name: string; lat: number; lng: number },
     dest: { name: string; lat: number; lng: number }
   ) => Promise<void> | void;
+  onBackToStart?: () => void;
+  initialTab?: 'solo' | 'join' | 'create';
   isConnected: boolean;
   initialCode?: string;
   currentGpsCoords?: { lat: number; lng: number } | null;
@@ -84,12 +87,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onCreateGroup,
   onJoinGroup,
   onStartSoloRide,
+  onBackToStart,
+  initialTab = 'solo',
   isConnected,
   initialCode = '',
   currentGpsCoords
 }) => {
   // Mobile Tab Switcher: 'solo' | 'join' | 'create'
-  const [activeTab, setActiveTab] = useState<'solo' | 'join' | 'create'>('solo');
+  const [activeTab, setActiveTab] = useState<'solo' | 'join' | 'create'>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
 
   // Profile modal state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -275,8 +284,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         
         {/* Decluttered Mobile Header Bar */}
         <header className="px-3.5 py-2.5 border-b-2 border-black bg-white flex items-center justify-between shrink-0 shadow-[0_2px_0px_#000]">
-          {/* Brand Logo & Title */}
+          {/* Brand Logo & Title (with optional Back button to Starting Page) */}
           <div className="flex items-center space-x-2">
+            {onBackToStart && (
+              <button
+                type="button"
+                onClick={onBackToStart}
+                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform mr-0.5"
+                title="Back to Welcome Starting Page"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-black" />
+              </button>
+            )}
             <div className="w-8 h-8 rounded-lg bg-[#ef4444] text-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center font-black">
               <Bike className="w-4 h-4" />
             </div>

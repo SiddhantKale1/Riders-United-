@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { StartingPage } from './components/StartingPage';
 import { LandingPage } from './components/LandingPage';
 import { StagingLobby } from './components/StagingLobby';
 import { MapView } from './components/MapView';
@@ -28,11 +29,18 @@ import { routingService } from './services/routingService';
 import { nativeMobile } from './services/nativeMobile';
 import { getApiBaseUrl } from './services/apiConfig';
 
-export type AppScreen = 'landing' | 'lobby' | 'cockpit';
+export type AppScreen = 'start' | 'plan' | 'lobby' | 'cockpit';
 
 export function App() {
-  // Screen router: 'landing' | 'lobby' | 'cockpit'
-  const [screen, setScreen] = useState<AppScreen>('landing');
+  // Screen router: 'start' (Starting Page) | 'plan' (Route Planner) | 'lobby' (Staging Lobby) | 'cockpit'
+  const [plannerTab, setPlannerTab] = useState<'solo' | 'join' | 'create'>('solo');
+  const [screen, setScreen] = useState<AppScreen>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('code')) return 'plan';
+    }
+    return 'start';
+  });
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
   // User Profile with LocalStorage Persistence
@@ -216,7 +224,7 @@ export function App() {
     socketService.setOnRideEnded(({ ride: endedRide, message }) => {
       setRide(endedRide);
       setIsRideActive(false);
-      setScreen('landing');
+      setScreen('start');
       alert(message || 'The ride has ended. Returning to main menu.');
     });
 
@@ -629,14 +637,14 @@ export function App() {
         socketService.endConvoyRide();
       }
       setIsRideActive(false);
-      setScreen('landing');
+      setScreen('start');
     }
   };
 
   const handleLeaveLobby = () => {
     setRide(null);
     setRiders([]);
-    setScreen('landing');
+    setScreen('start');
   };
 
   // Toggle Tracking Mode (Live GPS)
@@ -708,8 +716,23 @@ export function App() {
   // RENDER SCREENS
   // ══════════════════════════════════════════════════════════════════════
 
-  // 1. Landing Page (Default Front Door)
-  if (screen === 'landing') {
+  // 1. Starting Page (Welcome & Mode Launcher)
+  if (screen === 'start') {
+    return (
+      <StartingPage
+        currentProfile={profile}
+        onUpdateProfile={handleUpdateProfile}
+        onSelectMode={(mode) => {
+          setPlannerTab(mode);
+          setScreen('plan');
+        }}
+        isConnected={isConnected}
+      />
+    );
+  }
+
+  // 2. Ride Planner (Solo / Join / Create Route Form)
+  if (screen === 'plan') {
     return (
       <LandingPage
         currentProfile={profile}
@@ -717,6 +740,8 @@ export function App() {
         onCreateGroup={handleCreateGroup}
         onJoinGroup={handleJoinGroup}
         onStartSoloRide={handleStartSoloRide}
+        onBackToStart={() => setScreen('start')}
+        initialTab={plannerTab}
         isConnected={isConnected}
         initialCode={initialUrlCode}
         currentGpsCoords={currentGpsCoords}
