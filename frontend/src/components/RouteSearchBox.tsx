@@ -25,14 +25,14 @@ const PRESET_TOURS = [
     dest: { name: 'Baga Beach, Goa', lat: 15.5553, lng: 73.7517 }
   },
   {
-    name: 'Current Location ➔ Manali',
-    start: { name: 'My Current Location', lat: 28.6129, lng: 77.2295 },
-    dest: { name: 'Mall Road, Manali', lat: 32.2396, lng: 77.1887 }
+    name: 'Current Location ➔ Lonavala',
+    start: { name: 'My Current Location', lat: 18.5204, lng: 73.8567 },
+    dest: { name: 'Lonavala Ghats, Maharashtra', lat: 18.7557, lng: 73.4091 }
   },
   {
-    name: 'Current Location ➔ Ooty',
-    start: { name: 'My Current Location', lat: 12.9797, lng: 77.5912 },
-    dest: { name: 'Ooty Lake, Tamil Nadu', lat: 11.4102, lng: 76.6950 }
+    name: 'Current Location ➔ Lavasa',
+    start: { name: 'My Current Location', lat: 18.5204, lng: 73.8567 },
+    dest: { name: 'Lavasa, Maharashtra', lat: 18.4102, lng: 73.5074 }
   },
   {
     name: 'Current Location ➔ Mahabaleshwar',
@@ -137,45 +137,45 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
 
   return (
     <div className="relative pointer-events-auto select-none">
-      {/* Neobrutalist Compact Search Pill */}
+      {/* Google Maps Search Pill */}
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none rounded-lg px-2.5 py-1.5 flex items-center space-x-2 text-xs font-bold transition-all max-w-[260px] sm:max-w-xs group hover:bg-slate-50"
+          className="bg-white/95 backdrop-blur-md text-gray-800 border border-gray-200/80 shadow-md rounded-full px-4 py-2 flex items-center gap-2 text-xs font-semibold transition-all max-w-[280px] sm:max-w-xs hover:bg-white active:scale-95"
           title="Search route or destination"
         >
-          <Search className="w-3.5 h-3.5 text-[#2563eb] shrink-0" />
-          <span className="truncate text-black">
+          <Search className="w-4 h-4 text-gray-500 shrink-0" />
+          <span className="truncate text-gray-800">
             {activeRouteSummary || 'Where to? (Search Route)'}
           </span>
-          <span className="px-1 py-0.2 rounded bg-[#2563eb] text-white text-[9px] font-black shrink-0">
+          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold shrink-0">
             NAV
           </span>
         </button>
       ) : (
-        /* Neobrutalist Expanded Direction Drawer */
-        <div className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-3.5 w-[92vw] sm:w-[380px] max-h-[85vh] flex flex-col animate-fadeIn z-50">
-          <div className="flex items-center justify-between pb-2.5 border-b-2 border-black mb-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded bg-[#2563eb] text-white flex items-center justify-center border border-black shadow-[1px_1px_0px_#000]">
-                <Navigation className="w-3 h-3" />
+        /* Google Maps Direction Panel */
+        <div className="bg-white text-gray-900 border border-gray-150 rounded-3xl p-4 w-[92vw] sm:w-[380px] max-h-[85vh] shadow-2xl flex flex-col animate-fadeIn z-50">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                <Navigation className="w-3.5 h-3.5" />
               </div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-black">
-                Plan Route Anywhere
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900">
+                Plan Navigation Route
               </h3>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 rounded bg-slate-100 hover:bg-red-500 hover:text-white border border-black text-black transition-colors"
+              className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Start Point Input */}
-          <div className="relative mb-2">
-            <div className="flex items-center justify-between text-[10px] font-black text-slate-700 mb-1">
-              <span>START LOCATION</span>
+          <div className="relative mb-2.5">
+            <div className="flex items-center justify-between text-[10px] font-semibold text-gray-400 uppercase mb-1">
+              <span>Start Location</span>
               {currentGpsCoords && (
                 <button
                   type="button"
@@ -187,7 +187,7 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
                     });
                     setStartQuery('My Current Location');
                   }}
-                  className="text-[#2563eb] hover:underline flex items-center space-x-0.5"
+                  className="text-blue-600 hover:underline flex items-center gap-1 font-bold"
                 >
                   <Compass className="w-3 h-3" />
                   <span>Use GPS</span>
@@ -195,20 +195,20 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
               )}
             </div>
             <div className="relative flex items-center">
-              <span className="absolute left-2.5 text-[#2563eb] text-xs font-black">A</span>
+              <span className="absolute left-3 w-2 h-2 rounded-full bg-blue-600" />
               <input
                 type="text"
                 value={startQuery}
                 onChange={(e) => handleStartInputChange(e.target.value)}
                 onFocus={() => setActiveInput('start')}
                 placeholder="My Current Location (GPS)"
-                className="w-full bg-slate-50 border-2 border-black rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-black font-mono font-bold focus:outline-none focus:bg-white placeholder:text-slate-500 placeholder:font-bold"
+                className="w-full bg-gray-50 border border-gray-200/80 rounded-xl pl-8 pr-3 py-2 text-xs text-gray-800 font-medium focus:outline-none focus:bg-white"
               />
             </div>
 
             {/* Start Suggestions */}
             {activeInput === 'start' && startSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-lg p-1 z-50 max-h-44 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-150 rounded-2xl shadow-xl p-1 z-50 max-h-44 overflow-y-auto divide-y divide-gray-100">
                 {startSuggestions.map((item, idx) => (
                   <button
                     key={idx}
@@ -219,10 +219,10 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
                       setStartSuggestions([]);
                       setActiveInput(null);
                     }}
-                    className="w-full text-left p-1.5 rounded hover:bg-blue-50 text-xs text-black transition-colors flex items-start space-x-1.5 truncate font-medium"
+                    className="w-full text-left p-2.5 hover:bg-gray-50 text-xs text-gray-800 transition-colors flex items-start gap-2"
                   >
-                    <MapPin className="w-3.5 h-3.5 text-[#2563eb] shrink-0 mt-0.5" />
-                    <span className="truncate">{item.name}</span>
+                    <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                    <span className="truncate font-medium">{item.name}</span>
                   </button>
                 ))}
               </div>
@@ -231,27 +231,27 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
 
           {/* Destination Point Input */}
           <div className="relative mb-3">
-            <label className="block text-[10px] font-black text-slate-700 mb-1">
-              DESTINATION POINT
+            <label className="block text-[10px] font-semibold text-gray-400 uppercase mb-1">
+              Destination Point
             </label>
             <div className="relative flex items-center">
-              <span className="absolute left-2.5 text-[#ef4444] text-xs font-black">B</span>
+              <span className="absolute left-3 w-2 h-2 rounded-full bg-red-500" />
               <input
                 type="text"
                 value={destQuery}
                 onChange={(e) => handleDestInputChange(e.target.value)}
                 onFocus={() => setActiveInput('dest')}
                 placeholder="Destination city, hill, highway..."
-                className="w-full bg-slate-50 border-2 border-black rounded-lg pl-7 pr-7 py-1.5 text-xs text-black font-mono font-bold focus:outline-none focus:bg-white"
+                className="w-full bg-gray-50 border border-gray-200/80 rounded-xl pl-8 pr-8 py-2 text-xs text-gray-800 font-medium focus:outline-none focus:bg-white"
               />
               {isLoading && (
-                <Loader2 className="absolute right-2.5 w-3.5 h-3.5 text-[#2563eb] animate-spin" />
+                <Loader2 className="absolute right-3 w-3.5 h-3.5 text-blue-600 animate-spin" />
               )}
             </div>
 
             {/* Destination Suggestions */}
             {activeInput === 'dest' && destSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-black shadow-[3px_3px_0px_#000] rounded-lg p-1 z-50 max-h-44 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-150 rounded-2xl shadow-xl p-1 z-50 max-h-44 overflow-y-auto divide-y divide-gray-100">
                 {destSuggestions.map((item, idx) => (
                   <button
                     key={idx}
@@ -270,10 +270,10 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
                       setDestSuggestions([]);
                       setActiveInput(null);
                     }}
-                    className="w-full text-left p-1.5 rounded hover:bg-blue-50 text-xs text-black transition-colors flex items-start space-x-1.5 truncate font-medium"
+                    className="w-full text-left p-2.5 hover:bg-gray-50 text-xs text-gray-800 transition-colors flex items-start gap-2"
                   >
-                    <MapPin className="w-3.5 h-3.5 text-[#ef4444] shrink-0 mt-0.5" />
-                    <span className="truncate">{item.name}</span>
+                    <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                    <span className="truncate font-medium">{item.name}</span>
                   </button>
                 ))}
               </div>
@@ -285,29 +285,27 @@ export const RouteSearchBox: React.FC<RouteSearchBoxProps> = ({
             type="button"
             onClick={handleApplyRoute}
             disabled={!selectedStart || !selectedDest}
-            className="w-full py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center space-x-1.5 mb-2.5"
+            className="w-full py-2.5 rounded-full bg-[#18191D] hover:bg-black text-white font-semibold text-xs shadow-md transition-all flex items-center justify-center gap-2 mb-3 disabled:opacity-40"
           >
             <span>Navigate Route</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
 
-          {/* Quick Preset Tours (1-Click) */}
-          <div className="pt-2 border-t-2 border-black">
-            <span className="text-[9px] font-black text-slate-600 flex items-center space-x-1 mb-1.5 uppercase">
-              <Sparkles className="w-3 h-3 text-[#2563eb]" />
-              <span>POPULAR RIDE TOURS</span>
+          {/* Preset Tours */}
+          <div className="pt-2.5 border-t border-gray-100">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase block mb-1.5">
+              Popular Biker Corridors:
             </span>
-
-            <div className="grid grid-cols-1 gap-1 max-h-32 overflow-y-auto">
+            <div className="space-y-1 max-h-32 overflow-y-auto">
               {PRESET_TOURS.map((tour, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => handleSelectPreset(tour)}
-                  className="text-left px-2 py-1.5 rounded bg-slate-50 hover:bg-blue-50 border border-black text-xs font-bold text-black flex items-center justify-between transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-800 flex items-center justify-between transition-colors"
                 >
                   <span className="truncate">{tour.name}</span>
-                  <ArrowRight className="w-3 h-3 text-[#2563eb] shrink-0 ml-1" />
+                  <ArrowRight className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-1" />
                 </button>
               ))}
             </div>

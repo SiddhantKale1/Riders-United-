@@ -1,7 +1,8 @@
-import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { ClassicMobileApp, MobileTab } from './components/ClassicMobileApp';
 import { StagingLobby } from './components/StagingLobby';
-const MapView = lazy(() => import('./components/MapView').then((module) => ({ default: module.MapView })));
+import { MapView } from './components/MapView';
 import { GoogleMapsTurnCard } from './components/GoogleMapsTurnCard';
 import { GoogleMapsTopBar } from './components/GoogleMapsTopBar';
 import { SpeedometerPill } from './components/SpeedometerPill';
@@ -14,6 +15,7 @@ import { AuthModal } from './components/AuthModal';
 import { PasswordChangeModal } from './components/PasswordChangeModal';
 import { CrashSirenModal } from './components/CrashSirenModal';
 import { ShareRideModal } from './components/ShareRideModal';
+import { StartupAnimation } from './components/StartupAnimation';
 import { crashDetectionService } from './services/crashDetectionService';
 import { speechService } from './services/speechService';
 import {
@@ -37,6 +39,25 @@ import { routingService } from './services/routingService';
 import { nativeMobile } from './services/nativeMobile';
 import { getApiBaseUrl } from './services/apiConfig';
 
+const DEFAULT_MUMBAI_GOA_COORDS: [number, number][] = [
+  [18.9220, 72.8347],
+  [18.9000, 72.8200],
+  [18.7557, 73.4091],
+  [18.4500, 73.4500],
+  [18.1500, 73.3400],
+  [17.7200, 73.5300],
+  [17.3000, 73.4000],
+  [17.0000, 73.3000],
+  [16.1500, 73.7000],
+  [15.5553, 73.7517]
+];
+
+const DEFAULT_WAYPOINTS: Waypoint[] = [
+  { id: 'wp-start', name: 'Gateway of India, Mumbai', lat: 18.9220, lng: 72.8347, type: 'start' },
+  { id: 'wp-fuel-1', name: 'Mangaon Dhaba & IndianOil', lat: 18.1500, lng: 73.3400, type: 'fuel', description: 'Mandatory refuel point' },
+  { id: 'wp-dest', name: 'Baga Beach, Goa', lat: 15.5553, lng: 73.7517, type: 'destination' }
+];
+
 const authHeaders = (headers: Record<string, string> = {}): Record<string, string> => {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('riders_auth_token') : null;
   return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
@@ -55,6 +76,7 @@ export function App() {
   });
   const [screen, setScreen] = useState<AppScreen>('mobile');
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isStartupComplete, setIsStartupComplete] = useState<boolean>(false);
 
   // User Authentication & Database Session
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
@@ -890,6 +912,34 @@ export function App() {
     return riders.find((r) => r.id === profile.id) || riders[0] || null;
   }, [riders, profile.id]);
 
+  const effectiveCurrentRider = useMemo(() => {
+    if (currentRider) return currentRider;
+    return {
+      id: profile.id,
+      name: profile.name,
+      callsign: profile.callsign,
+      bikeModel: profile.bikeModel,
+      avatarColor: profile.avatarColor,
+      role: profile.role,
+      lat: currentGpsCoords?.lat || 18.9220,
+      lng: currentGpsCoords?.lng || 72.8347,
+      heading: 45,
+      speed: 0,
+      altitude: 12,
+      battery: 100,
+      isOnline: true,
+      isTalking: false,
+      lastPing: Date.now(),
+      distanceFromLeader: 0,
+      distanceCoveredKm: 0,
+      channel: 'convoy-main'
+    };
+  }, [currentRider, profile, currentGpsCoords]);
+
+  const effectiveRiders = useMemo(() => {
+    return riders.length > 0 ? riders : [effectiveCurrentRider];
+  }, [riders, effectiveCurrentRider]);
+
   const activeWaypoints = customWaypoints.length > 0
     ? customWaypoints
     : (ride ? ride.route : []);
@@ -931,6 +981,16 @@ export function App() {
             setIsShareModalOpen(true);
           }}
           onTestCrash={() => crashDetectionService.simulateCrash(4.2)}
+          onOpenCockpit={() => setScreen('cockpit')}
+          activeRoutePath={activeRoute?.coordinates || DEFAULT_MUMBAI_GOA_COORDS}
+          activeRoute={activeRoute}
+          riders={effectiveRiders}
+          waypoints={activeWaypoints.length > 0 ? activeWaypoints : DEFAULT_WAYPOINTS}
+          cameraMode={cameraMode}
+          onSetCameraMode={setCameraMode}
+          isRideActive={isRideActive}
+          onReplayStartup={() => setIsStartupComplete(false)}
+          alerts={alerts}
         />
 
         {/* 1-Click WhatsApp Invite Modal */}
@@ -979,6 +1039,11 @@ export function App() {
           isOpen={isPasswordChangeOpen}
           onClose={() => setIsPasswordChangeOpen(false)}
         />
+
+        {/* Minimalist Typographic App Startup Animation (Inspired by Brag / HyperFrames Motion) */}
+        {!isStartupComplete && (
+          <StartupAnimation onComplete={() => setIsStartupComplete(true)} />
+        )}
       </>
     );
   }
@@ -1018,21 +1083,30 @@ export function App() {
   // 3. Landscape Cockpit (Active Navigation)
   return (
     <div className="relative w-full h-dvh max-h-dvh overflow-hidden bg-[#0b0f19] font-sans select-none text-black">
+      {/* Floating Back to Mobile App Button */}
+      <button
+        type="button"
+        onClick={() => setScreen('mobile')}
+        className="absolute top-4 left-4 z-40 px-3.5 py-2 rounded-full bg-black/75 hover:bg-black backdrop-blur-md text-white text-xs font-semibold border border-white/20 shadow-lg flex items-center gap-1.5 transition-all active:scale-95 pointer-events-auto"
+        title="Return to Mobile App"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>Back to App</span>
+      </button>
+
       {/* Fullscreen Interactive Leaflet Map (Satellite Imagery ONLY) */}
       <div className="absolute inset-0 w-full h-full z-0">
-        <Suspense fallback={<div className="h-full w-full bg-[#090b10]" aria-label="Loading map" />}>
         <MapView
-          riders={riders}
-          waypoints={activeWaypoints}
+          riders={effectiveRiders}
+          waypoints={activeWaypoints.length > 0 ? activeWaypoints : DEFAULT_WAYPOINTS}
           currentRiderId={profile.id}
           cameraMode={cameraMode}
           onSetCameraMode={setCameraMode}
-          activeRoutePath={activeRoute?.coordinates}
+          activeRoutePath={activeRoute?.coordinates || DEFAULT_MUMBAI_GOA_COORDS}
           isRideActive={isRideActive}
-          startPoint={activeRoute && activeRoute.coordinates.length > 0 ? { lat: activeRoute.coordinates[0][0], lng: activeRoute.coordinates[0][1] } : null}
+          startPoint={activeRoute && activeRoute.coordinates.length > 0 ? { lat: activeRoute.coordinates[0][0], lng: activeRoute.coordinates[0][1] } : (currentGpsCoords || { lat: 18.9220, lng: 72.8347 })}
           alerts={alerts}
         />
-        </Suspense>
       </div>
 
       {/* Top Left: Neobrutalism Turn-by-Turn Card */}
@@ -1169,6 +1243,10 @@ export function App() {
           setIsCrashModalOpen(false);
         }}
       />
+      {/* Minimalist Typographic App Startup Animation (Inspired by Brag / HyperFrames Motion) */}
+      {!isStartupComplete && (
+        <StartupAnimation onComplete={() => setIsStartupComplete(true)} />
+      )}
     </div>
   );
 }

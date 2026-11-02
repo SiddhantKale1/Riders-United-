@@ -53,11 +53,12 @@ export class OfflineMapService {
 
       // Limit concurrent downloads to avoid overwhelming mobile network
       const BATCH_SIZE = 6;
+      const CARTO_API_KEY = 'cb1_4zkt_1_ddbf774aaf22c246a6596148';
       for (let i = 0; i < tileList.length; i += BATCH_SIZE) {
         const batch = tileList.slice(i, i + BATCH_SIZE);
         await Promise.all(
           batch.map(async (tileCoord) => {
-            const url = `https://a.basemaps.cartocdn.com/dark_all/${tileCoord}.png`;
+            const url = `https://a.basemaps.cartocdn.com/rastertiles/voyager/${tileCoord}.png?key=${CARTO_API_KEY}`;
             try {
               const match = await cache.match(url);
               if (!match) {

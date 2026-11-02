@@ -53,29 +53,29 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
   const getRoleBadge = (role: RiderRole) => {
     switch (role) {
       case 'leader':
-        return <span className="text-[9px] bg-[#ef4444] text-white border border-black px-1.5 py-0.2 rounded font-black uppercase shadow-[1px_1px_0px_#000]">LEAD</span>;
+        return <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold uppercase">Captain</span>;
       case 'sweeper':
-        return <span className="text-[9px] bg-[#2563eb] text-white border border-black px-1.5 py-0.2 rounded font-black uppercase shadow-[1px_1px_0px_#000]">SWEEP</span>;
+        return <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase">Sweeper</span>;
       case 'scout':
-        return <span className="text-[9px] bg-amber-400 text-black border border-black px-1.5 py-0.2 rounded font-black uppercase shadow-[1px_1px_0px_#000]">SCOUT</span>;
+        return <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold uppercase">Scout</span>;
       default:
-        return <span className="text-[9px] bg-slate-200 text-black border border-black px-1.5 py-0.2 rounded font-black uppercase">PACK</span>;
+        return <span className="text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium uppercase">Pack</span>;
     }
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 w-full sm:w-[350px] bg-white text-black border-l-2 border-black shadow-[-4px_0px_0px_#000] flex flex-col transition-all select-none animate-fadeIn">
+    <div className="fixed inset-y-0 right-0 z-40 w-full sm:w-[360px] bg-white text-gray-900 border-l border-gray-200 shadow-2xl flex flex-col transition-all select-none animate-fadeIn">
       {/* Header */}
-      <div className="p-3 border-b-2 border-black flex items-center justify-between shrink-0 bg-slate-50">
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded bg-[#2563eb] text-white border border-black shadow-[1px_1px_0px_#000] flex items-center justify-center font-bold">
-            <Users className="w-3.5 h-3.5" />
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <Users className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-xs font-black uppercase tracking-wide text-black leading-none">
+            <h2 className="text-sm font-bold text-gray-900 leading-none">
               Convoy Pack
             </h2>
-            <p className="text-[10px] text-slate-600 font-mono mt-0.5">
+            <p className="text-xs text-gray-400 mt-1">
               {riders.length} Riders in Squadron
             </p>
           </div>
@@ -83,22 +83,22 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
 
         <button
           onClick={onClose}
-          className="p-1 rounded bg-white hover:bg-red-500 hover:text-white border border-black text-black transition-colors"
+          className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* Leader Actions */}
       {isLeader && (
-        <div className="px-3 py-1.5 bg-red-50 border-b-2 border-black flex items-center justify-between text-xs shrink-0">
-          <span className="text-black font-black flex items-center space-x-1.5 text-[11px]">
+        <div className="px-4 py-2 bg-red-50/70 border-b border-red-100 flex items-center justify-between text-xs shrink-0">
+          <span className="text-red-900 font-bold flex items-center gap-1.5 text-xs">
             <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span>LEAD CONTROLS</span>
+            <span>Leader Controls</span>
           </span>
           <button
             onClick={onTriggerRegroup}
-            className="px-2 py-0.5 rounded bg-[#ef4444] hover:bg-red-600 text-white font-black border border-black shadow-[1px_1px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 text-[10px] uppercase"
+            className="px-3 py-1 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
           >
             <BellRing className="w-3 h-3" />
             <span>Regroup</span>
@@ -106,52 +106,52 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex border-b-2 border-black text-xs font-black shrink-0">
-        <button
-          onClick={() => setActiveTab('roster')}
-          className={`flex-1 py-2 text-center transition-colors flex items-center justify-center space-x-1 border-r-2 border-black ${
-            activeTab === 'roster'
-              ? 'bg-[#2563eb] text-white'
-              : 'bg-white text-black hover:bg-slate-100'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Roster ({riders.length})</span>
-        </button>
+      {/* Segmented Pill Tabs */}
+      <div className="p-2 border-b border-gray-100 shrink-0">
+        <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-full">
+          <button
+            onClick={() => setActiveTab('roster')}
+            className={`py-1.5 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === 'roster'
+                ? 'bg-[#18191D] text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Roster ({riders.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('chat')}
-          className={`flex-1 py-2 text-center transition-colors flex items-center justify-center space-x-1 ${
-            activeTab === 'chat'
-              ? 'bg-[#ef4444] text-white'
-              : 'bg-white text-black hover:bg-slate-100'
-          }`}
-        >
-          <Radio className="w-3.5 h-3.5" />
-          <span>Comms ({messages.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`py-1.5 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === 'chat'
+                ? 'bg-[#18191D] text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>Radio ({messages.length})</span>
+          </button>
+        </div>
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {activeTab === 'roster' ? (
           <>
             {/* Voice Channel Status */}
-            <div className="bg-blue-50 border-2 border-black rounded-lg p-2 shadow-[2px_2px_0px_#000]">
-              <div className="flex items-center justify-between text-[#2563eb]">
-                <div className="flex items-center space-x-1.5 font-black text-xs">
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>#convoy-main</span>
-                </div>
-                <span className="text-[9px] bg-[#2563eb] text-white border border-black px-1.5 py-0.2 rounded font-black">
-                  CONNECTED
-                </span>
+            <div className="bg-blue-50/80 border border-blue-100 rounded-2xl p-3 flex items-center justify-between text-blue-900 text-xs">
+              <div className="flex items-center gap-2 font-bold">
+                <Volume2 className="w-4 h-4 text-blue-600" />
+                <span>#convoy-main</span>
               </div>
+              <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">
+                CONNECTED
+              </span>
             </div>
 
             {/* Rider Cards */}
-            <div className="space-y-1.5 mt-2">
+            <div className="space-y-2">
               {riders.map((rider) => {
                 const isMe = rider.id === currentRiderId;
                 const isSelected = selectedRiderForRole === rider.id;
@@ -159,77 +159,77 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
                 return (
                   <div
                     key={rider.id}
-                    className={`rounded-lg p-2 border-2 border-black transition-all ${
+                    className={`rounded-2xl p-3 border transition-all ${
                       isMe
-                        ? 'bg-blue-50 shadow-[2px_2px_0px_#000]'
-                        : 'bg-white hover:bg-slate-50 shadow-[2px_2px_0px_#000]'
+                        ? 'bg-blue-50/40 border-blue-200 shadow-sm'
+                        : 'bg-gray-50/70 border-gray-150 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <div
-                        className="flex items-center space-x-2 cursor-pointer flex-1 min-w-0"
+                        className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0"
                         onClick={() => onFocusRider(rider.id)}
                         title="Focus on map"
                       >
                         <div
-                          className="w-7 h-7 rounded-md border border-black flex items-center justify-center text-white shadow-[1px_1px_0px_#000] shrink-0"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm"
                           style={{ backgroundColor: rider.avatarColor }}
                         >
-                          <Bike className="w-3.5 h-3.5 text-white" />
+                          <Bike className="w-4 h-4 text-white" />
                         </div>
 
                         <div className="truncate">
-                          <div className="flex items-center space-x-1 truncate">
-                            <span className="font-black text-xs text-black truncate">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="font-bold text-xs text-gray-900 truncate">
                               {rider.name}
                             </span>
                             {isMe && (
-                              <span className="text-[8px] bg-[#2563eb] text-white font-black px-1 py-0.2 rounded border border-black">
+                              <span className="text-[9px] bg-blue-600 text-white font-bold px-1.5 py-0.2 rounded-full">
                                 YOU
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] font-bold text-slate-600 font-mono">
+                          <div className="text-[10px] text-gray-400 font-mono">
                             {rider.callsign}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-1 shrink-0 ml-1">
+                      <div className="flex items-center gap-1 shrink-0">
                         {getRoleBadge(rider.role)}
                         {isLeader && (
                           <button
                             onClick={() => setSelectedRiderForRole(isSelected ? null : rider.id)}
-                            className="p-1 rounded bg-slate-100 hover:bg-black hover:text-white border border-black text-black ml-1 transition-colors"
+                            className="w-7 h-7 rounded-full bg-white hover:bg-gray-200 border border-gray-200 flex items-center justify-center text-gray-700 transition-colors"
                             title="Change Role"
                           >
-                            <Settings className="w-3 h-3" />
+                            <Settings className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
                     </div>
 
-                    <div className="mt-1 text-[10px] text-slate-600 font-medium truncate">
+                    <p className="mt-1 text-[11px] text-gray-500 font-medium truncate">
                       {rider.bikeModel}
-                    </div>
+                    </p>
 
-                    <div className="mt-1.5 grid grid-cols-3 gap-1 bg-slate-100 border border-black rounded p-1 text-[9px] font-mono text-black font-bold">
+                    <div className="mt-2 grid grid-cols-3 gap-1 bg-white border border-gray-150 rounded-xl p-1.5 text-[10px] font-mono text-gray-700 font-bold text-center">
                       <div>
-                        <span className="text-slate-500">SPD:</span>{' '}
-                        <span className="text-[#ef4444]">{rider.speed}k</span>
+                        <span className="text-gray-400 font-normal">SPD:</span>{' '}
+                        <span className="text-red-600">{rider.speed}k</span>
                       </div>
                       <div>
-                        <span className="text-slate-500">BAT:</span>{' '}
-                        <span className="text-[#2563eb]">{rider.battery}%</span>
+                        <span className="text-gray-400 font-normal">BAT:</span>{' '}
+                        <span className="text-blue-600">{rider.battery}%</span>
                       </div>
                       <div>
-                        <span className="text-slate-500">GAP:</span>{' '}
+                        <span className="text-gray-400 font-normal">GAP:</span>{' '}
                         <span>{rider.distanceFromLeader}m</span>
                       </div>
                     </div>
 
                     {isSelected && isLeader && (
-                      <div className="mt-2 pt-1.5 border-t border-black grid grid-cols-4 gap-1">
+                      <div className="mt-2.5 pt-2 border-t border-gray-150 grid grid-cols-4 gap-1">
                         {(['leader', 'scout', 'rider', 'sweeper'] as RiderRole[]).map((r) => (
                           <button
                             key={r}
@@ -237,10 +237,10 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
                               onAssignRole(rider.id, r);
                               setSelectedRiderForRole(null);
                             }}
-                            className={`py-0.5 rounded text-[9px] font-black uppercase border border-black transition-all ${
+                            className={`py-1 rounded-full text-[10px] font-bold uppercase transition-all ${
                               rider.role === r
-                                ? 'bg-black text-white'
-                                : 'bg-white text-black hover:bg-slate-100'
+                                ? 'bg-[#18191D] text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                           >
                             {r}
@@ -255,36 +255,36 @@ export const ConvoyRoster: React.FC<ConvoyRosterProps> = ({
           </>
         ) : (
           <div className="flex flex-col h-full justify-between">
-            <div className="space-y-1.5 mb-2 overflow-y-auto">
+            <div className="space-y-2 mb-3 overflow-y-auto flex-1">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`p-2 rounded-lg text-xs font-mono border-2 border-black shadow-[2px_2px_0px_#000] ${
+                  className={`p-3 rounded-2xl text-xs border ${
                     msg.type === 'alert'
-                      ? 'bg-red-50 text-[#ef4444]'
-                      : 'bg-slate-50 text-black'
+                      ? 'bg-red-50 text-red-700 border-red-200'
+                      : 'bg-gray-50 text-gray-800 border-gray-150'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[9px] text-slate-600 mb-0.5">
-                    <span className="font-black text-black">{msg.senderName}</span>
+                  <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                    <span className="font-bold text-gray-900">{msg.senderName}</span>
                     <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <div className="font-bold">{msg.text}</div>
+                  <div className="font-medium">{msg.text}</div>
                 </div>
               ))}
             </div>
 
-            <form onSubmit={handleSend} className="flex items-center space-x-1 pt-2 border-t-2 border-black">
+            <form onSubmit={handleSend} className="flex items-center gap-2 pt-2 border-t border-gray-100">
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Message to convoy..."
-                className="flex-1 bg-slate-50 border-2 border-black rounded-lg px-2.5 py-1.5 text-xs text-black font-bold placeholder-slate-400 focus:outline-none focus:bg-white"
+                className="flex-1 bg-gray-50 border border-gray-200/80 rounded-full px-4 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white"
               />
               <button
                 type="submit"
-                className="p-2 rounded-lg bg-[#2563eb] text-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none font-black hover:bg-blue-700 transition-colors"
+                className="w-8 h-8 rounded-full bg-[#18191D] hover:bg-black text-white flex items-center justify-center transition-colors shadow-sm"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

@@ -45,6 +45,15 @@ input, textarea, select {
   touch-action: pan-y;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .mobile-app-nav,
 .staging-lobby-footer {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem));

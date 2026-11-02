@@ -6,7 +6,8 @@ import {
   Users,
   Play,
   X,
-  Fuel
+  Fuel,
+  Navigation
 } from 'lucide-react';
 import { voiceComms } from '../services/voiceComms';
 import { nativeMobile } from '../services/nativeMobile';
@@ -78,7 +79,6 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
       }
     };
 
-    // Android Physical Volume Down / Headset Hook PTT trigger (Zero hardware required)
     const handleHardwarePtt = (e: Event) => {
       const customEvent = e as CustomEvent<{ state: 'down' | 'up' }>;
       if (customEvent.detail?.state === 'down') {
@@ -121,36 +121,34 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
   });
 
   return (
-    <div className="absolute bottom-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] right-[max(0.875rem,env(safe-area-inset-right,0.875rem))] z-30 pointer-events-auto select-none flex items-center justify-end space-x-2 animate-fadeIn">
+    <div className="absolute bottom-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] right-[max(0.875rem,env(safe-area-inset-right,0.875rem))] z-30 pointer-events-auto select-none flex items-center justify-end gap-2 animate-fadeIn">
       {/* Remote Speaker Banner */}
       {isOtherRiderTalking && (
-        <div className="absolute -top-10 right-0 bg-[#ef4444] text-white border-2 border-black shadow-[2px_2px_0px_#000] px-2.5 py-1 rounded-lg text-xs font-black flex items-center space-x-1.5 animate-bounce">
-          <Volume2 className="w-3.5 h-3.5 text-white animate-pulse" />
+        <div className="absolute -top-12 right-0 bg-red-600 text-white shadow-xl px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 animate-bounce border border-red-400/40">
+          <Volume2 className="w-4 h-4 text-white animate-pulse" />
           <span>
             <strong>{activeSpeaker.callsign}</strong> transmitting...
           </span>
         </div>
       )}
 
-      {/* Neobrutalist Bottom Navigation Bar (White, Red & Blue) */}
-      <div className="bg-white text-black border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-1.5 sm:px-3 sm:py-2 flex items-center space-x-2 sm:space-x-2.5">
-        {/* Left: ETA & Distance */}
-        <div className="flex flex-col justify-center pr-2 sm:pr-2.5 border-r-2 border-black">
-          <div className="flex items-baseline space-x-1">
-            <span className="text-lg sm:text-xl font-black text-[#2563eb] font-mono leading-none tracking-tight">
-              {durationMinutes >= 60
-                ? `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`
-                : `${durationMinutes}m`}
-            </span>
+      {/* Google Maps Navigation Card */}
+      <div className="bg-white/95 backdrop-blur-md text-gray-900 border border-gray-200/80 shadow-[0_12px_36px_rgba(0,0,0,0.25)] rounded-3xl p-2 sm:px-4 sm:py-2.5 flex items-center gap-3">
+        {/* Left: ETA, Remaining Distance & Arrival Time */}
+        <div className="flex flex-col justify-center pr-3 border-r border-gray-200">
+          <div className="text-xl sm:text-2xl font-black text-[#0F5132] font-sans leading-none tracking-tight">
+            {durationMinutes >= 60
+              ? `${Math.floor(durationMinutes / 60)} hr ${durationMinutes % 60} min`
+              : `${durationMinutes} min`}
           </div>
-          <div className="text-[10px] font-mono font-bold text-slate-700 mt-0.5 flex items-center space-x-1">
+          <div className="text-[11px] font-semibold text-gray-500 mt-1 flex items-center gap-1.5">
             <span>{distanceKm} km</span>
             <span>•</span>
-            <span>{arrivalTime}</span>
+            <span className="text-gray-900 font-bold">{arrivalTime}</span>
           </div>
         </div>
 
-        {/* Center: Push-To-Talk Button (Visible, Compact, Punchy) */}
+        {/* Center: Push-To-Talk Radio Button */}
         <div className="relative flex items-center justify-center">
           <button
             onPointerDown={(e) => {
@@ -163,52 +161,49 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
             }}
             onContextMenu={(e) => e.preventDefault()}
             aria-label="Push To Talk Walkie Talkie Radio"
-            className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all touch-none ${
+            className={`w-12 h-12 rounded-2xl flex flex-col items-center justify-center transition-all touch-none shadow-md ${
               isTransmitting
-                ? 'bg-[#ef4444] text-white animate-pulse'
+                ? 'bg-red-600 text-white scale-95 shadow-red-500/50'
                 : isOtherRiderTalking
-                ? 'bg-red-600 text-white'
-                : 'bg-[#2563eb] hover:bg-[#1d4ed8] text-white'
+                ? 'bg-red-500 text-white'
+                : 'bg-[#18191D] hover:bg-black text-white active:scale-95'
             }`}
             title="Hold to Talk (or Spacebar)"
           >
             {isTransmitting ? (
-              <Radio className="w-4 h-4 animate-spin" />
+              <Radio className="w-5 h-5 animate-spin" />
             ) : (
-              <Mic className="w-4 h-4" />
+              <Mic className="w-5 h-5" />
             )}
-            <span className="text-[7.5px] font-black font-mono tracking-wider uppercase mt-0.5 leading-none">
+            <span className="text-[8px] font-bold tracking-wider uppercase mt-0.5 leading-none">
               {isTransmitting ? 'LIVE' : 'PTT'}
             </span>
           </button>
         </div>
 
-        {/* Small, Visible Action Buttons (Fuel, Hazard, Squad) */}
-        <div className="flex items-center space-x-1">
-          {/* Fuel Stops */}
+        {/* Action Buttons (Fuel Stops & Convoy Pack) */}
+        <div className="flex items-center gap-1.5">
           <button
             onClick={onHighlightFuel}
             aria-label="View Highway Fuel Pumps"
-            className="h-8 px-2 rounded bg-white hover:bg-slate-100 text-black border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 font-bold text-xs transition-transform"
+            className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-colors"
             title="Highway Fuel Pumps"
           >
-            <Fuel className="w-3.5 h-3.5 text-amber-500" />
-            <span className="hidden md:inline text-[11px]">Fuel</span>
+            <Fuel className="w-4 h-4 text-amber-600" />
           </button>
 
-          {/* Squad Riders */}
           <button
             onClick={onOpenRoster}
             aria-label="View Convoy Pack Squadron"
-            className="h-8 px-2 rounded bg-[#2563eb] hover:bg-blue-700 text-white border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 font-bold text-xs transition-transform"
+            className="h-9 px-3 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center gap-1.5 font-bold text-xs transition-colors"
             title="Convoy Pack"
           >
-            <Users className="w-3.5 h-3.5 text-white" />
-            <span className="font-mono text-[11px] font-black">{ridersCount}</span>
+            <Users className="w-4 h-4 text-blue-600" />
+            <span>{ridersCount}</span>
           </button>
         </div>
 
-        {/* Start / End Navigation Button */}
+        {/* Start Navigation or End Trip (Google Maps Red Exit Button) */}
         <div>
           {!isRideActive ? (
             <button
@@ -220,25 +215,23 @@ export const GoogleMapsBottomBar: React.FC<GoogleMapsBottomBarProps> = ({
                 onStartRide();
               }}
               aria-label="Start Navigation"
-              className={`h-8 px-2.5 rounded font-black text-xs uppercase tracking-wider border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 transition-transform ${
+              className={`h-10 px-4 rounded-full font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md ${
                 hasActiveRoute
-                  ? 'bg-[#2563eb] hover:bg-blue-700 text-white'
-                  : 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                  ? 'bg-[#1A73E8] hover:bg-blue-700 text-white'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
-              title={hasActiveRoute ? "Start Navigation" : "Destination required to start"}
             >
-              <Play className="w-3 h-3 fill-current" />
-              <span>{hasActiveRoute ? 'Start' : 'Set Dest'}</span>
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Start</span>
             </button>
           ) : (
             <button
               onClick={onEndRide}
-              aria-label="End Navigation"
-              className="h-8 px-2.5 rounded bg-[#ef4444] hover:bg-red-600 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[1.5px_1.5px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center space-x-1 transition-transform"
+              aria-label="Exit Navigation"
+              className="w-10 h-10 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-all shadow-sm"
               title="Exit Navigation"
             >
-              <X className="w-3.5 h-3.5" />
-              <span>End</span>
+              <X className="w-5 h-5 stroke-[2.5]" />
             </button>
           )}
         </div>

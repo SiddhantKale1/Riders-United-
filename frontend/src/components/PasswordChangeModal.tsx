@@ -45,17 +45,17 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border-2 border-black bg-white p-5 text-black shadow-[6px_6px_0px_#000]">
-        <div className="flex items-center justify-between border-b-2 border-black pb-3">
-          <div className="flex items-center gap-2 font-black uppercase">
-            <KeyRound className="h-4 w-4 text-[#2563eb]" /> Change password
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-[32px] border border-gray-150 bg-white p-6 text-gray-900 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="flex items-center gap-2 font-bold text-sm text-gray-900">
+            <KeyRound className="h-4 w-4 text-blue-600" /> Change Password
           </div>
-          <button type="button" onClick={onClose} aria-label="Close password change" className="rounded border border-black p-1">
+          <button type="button" onClick={onClose} aria-label="Close password change" className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <label className="block text-xs font-bold">
+        <label className="block text-xs font-semibold text-gray-700">
           Current password
           <input
             required
@@ -63,10 +63,10 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen
             type="password"
             value={currentPassword}
             onChange={(event) => setCurrentPassword(event.target.value)}
-            className="mt-1 w-full rounded-lg border-2 border-black bg-slate-50 p-2"
+            className="mt-1 w-full rounded-xl border border-gray-200/80 bg-gray-50 p-2.5 text-xs font-medium focus:bg-white focus:outline-none"
           />
         </label>
-        <label className="block text-xs font-bold">
+        <label className="block text-xs font-semibold text-gray-700">
           New password (12 characters minimum)
           <input
             required
@@ -76,14 +76,14 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen
             type="password"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
-            className="mt-1 w-full rounded-lg border-2 border-black bg-slate-50 p-2"
+            className="mt-1 w-full rounded-xl border border-gray-200/80 bg-gray-50 p-2.5 text-xs font-medium focus:bg-white focus:outline-none"
           />
         </label>
-        {error && <p role="alert" className="text-xs font-bold text-red-700">{error}</p>}
-        <button disabled={isSaving} className="w-full rounded-lg border-2 border-black bg-[#ef4444] p-2 text-sm font-black text-white disabled:opacity-60">
-          {isSaving ? 'Saving…' : 'Update password'}
+        {error && <p role="alert" className="text-xs font-medium text-red-600">{error}</p>}
+        <button disabled={isSaving} className="w-full rounded-full bg-[#18191D] hover:bg-black py-3 text-xs font-semibold text-white shadow-md transition-all disabled:opacity-60">
+          {isSaving ? 'Saving…' : 'Update Password'}
         </button>
-        <p className="text-[10px] text-slate-600">Changing your password signs out other sessions.</p>
+        <p className="text-[10px] text-gray-400 text-center">Changing your password signs out other active sessions.</p>
       </form>
     </div>
   );

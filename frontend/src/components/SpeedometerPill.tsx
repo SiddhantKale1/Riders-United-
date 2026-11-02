@@ -19,35 +19,50 @@ export const SpeedometerPill: React.FC<SpeedometerPillProps> = ({
   };
 
   const isSpreadWarning = packSpreadMeters > 2500;
+  const isSpreadCaution = packSpreadMeters > 1500 && packSpreadMeters <= 2500;
 
   return (
-    <div className="absolute bottom-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] left-[max(0.875rem,env(safe-area-inset-left,0.875rem))] z-30 pointer-events-auto select-none flex items-end space-x-2 animate-fadeIn">
-      {/* Neobrutalist Red & Blue Speedometer Box */}
-      <div className="bg-white text-black border-2 border-black shadow-[3px_3px_0px_#000] rounded-xl p-2 flex items-center space-x-2.5">
-        {/* Speed Number in Bold Red Block */}
-        <div className="flex flex-col items-center justify-center bg-[#ef4444] text-white rounded-lg px-2.5 py-1 border-2 border-black min-w-[56px] shadow-[1px_1px_0px_#000]">
-          <span className="text-2xl font-black font-mono tracking-tight leading-none text-white">
+    <div className="absolute bottom-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] left-[max(0.875rem,env(safe-area-inset-left,0.875rem))] z-30 pointer-events-auto select-none flex items-end gap-2 animate-fadeIn">
+      {/* Google Maps Speedometer Card */}
+      <div className="bg-white/95 backdrop-blur-md text-gray-900 border border-gray-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.25)] rounded-2xl p-3 flex items-center gap-3">
+        {/* Speed Readout */}
+        <div className="flex flex-col items-center justify-center min-w-[50px]">
+          <span className="text-3xl font-black font-sans tracking-tight leading-none text-gray-900">
             {speed}
           </span>
-          <span className="text-[8px] font-black uppercase tracking-widest text-red-100 mt-0.5">
-            KM/H
+          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 mt-0.5">
+            km/h
           </span>
         </div>
 
-        {/* Heading & Convoy Pack Spread */}
-        <div className="flex flex-col text-xs font-mono pr-1">
-          {/* Compass Direction */}
-          <div className="flex items-center space-x-1 text-black font-bold text-[11px]">
-            <Compass className="w-3.5 h-3.5 text-[#2563eb]" />
-            <span>{heading}° {getCardinal(heading)}</span>
+        {/* Vertical Divider */}
+        <div className="w-[1px] h-8 bg-gray-200" />
+
+        {/* Speed Limit & Compass Info */}
+        <div className="flex flex-col gap-1 pr-1">
+          <div className="flex items-center gap-2">
+            {/* Google Maps Style Speed Limit Circular Badge */}
+            <div className="w-6 h-6 rounded-full border-2 border-red-600 bg-white flex items-center justify-center text-[10px] font-black text-gray-900 shadow-xs">
+              80
+            </div>
+
+            {/* Compass Heading */}
+            <div className="flex items-center gap-1 text-gray-700 font-bold text-xs">
+              <Compass className="w-3.5 h-3.5 text-blue-600" />
+              <span>{heading}° {getCardinal(heading)}</span>
+            </div>
           </div>
 
-          {/* Convoy Spread */}
-          <div className={`flex items-center space-x-1 text-[10px] font-black mt-1 px-1.5 py-0.5 rounded border border-black ${
-            isSpreadWarning ? 'bg-red-100 text-[#ef4444] animate-pulse' : 'bg-blue-100 text-[#2563eb]'
+          {/* Convoy Pack Spread Badge */}
+          <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            isSpreadWarning
+              ? 'bg-red-100 text-red-700 animate-pulse'
+              : isSpreadCaution
+              ? 'bg-amber-100 text-amber-800'
+              : 'bg-emerald-100 text-emerald-800'
           }`}>
-            <Shield className="w-2.5 h-2.5" />
-            <span>{(packSpreadMeters / 1000).toFixed(1)} km pack</span>
+            <Shield className="w-3 h-3" />
+            <span>{(packSpreadMeters / 1000).toFixed(1)} km pack {isSpreadWarning ? '• Stretch' : '• Optimal'}</span>
           </div>
         </div>
       </div>
