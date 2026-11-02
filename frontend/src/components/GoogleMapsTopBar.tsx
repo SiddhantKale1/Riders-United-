@@ -4,24 +4,17 @@ import {
   VolumeX,
   Smartphone,
   Check,
-  Share2,
-  Settings,
-  Radio,
-  Sun,
-  Moon
+  Share2
 } from 'lucide-react';
-import { RideChannel, TrackingMode } from '../types';
+import { RideChannel } from '../types';
 import { RouteSearchBox } from './RouteSearchBox';
 
 interface GoogleMapsTopBarProps {
   ride: RideChannel | null;
-  trackingMode: TrackingMode;
-  onToggleTrackingMode: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
   wakeLockActive: boolean;
   onToggleWakeLock: () => void;
-  onOpenRideModal: () => void;
   onRouteSelected: (
     start: { name: string; lat: number; lng: number },
     dest: { name: string; lat: number; lng: number }
@@ -33,13 +26,10 @@ interface GoogleMapsTopBarProps {
 
 export const GoogleMapsTopBar: React.FC<GoogleMapsTopBarProps> = ({
   ride,
-  trackingMode,
-  onToggleTrackingMode,
   soundEnabled,
   onToggleSound,
   wakeLockActive,
   onToggleWakeLock,
-  onOpenRideModal,
   onRouteSelected,
   currentGpsCoords,
   activeRouteSummary,

@@ -1119,13 +1119,10 @@ export function App() {
       {/* Top Center & Right: Search Route & Quick Settings */}
       <GoogleMapsTopBar
         ride={ride}
-        trackingMode="device_gps"
-        onToggleTrackingMode={handleToggleTrackingMode}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         wakeLockActive={wakeLockActive}
         onToggleWakeLock={handleToggleWakeLock}
-        onOpenRideModal={() => setIsRideModalOpen(true)}
         onRouteSelected={handleRouteSelected}
         currentGpsCoords={currentGpsCoords}
         activeRouteSummary={activeRoute?.title}

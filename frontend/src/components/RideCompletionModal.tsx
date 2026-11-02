@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Compass, Clock, Gauge, ArrowRight, X, AlertTriangle, CheckCircle2, History, Share2, MessageSquare } from 'lucide-react';
+import { Award, Compass, Clock, Gauge, ArrowRight, X, AlertTriangle, CheckCircle2, History, MessageSquare } from 'lucide-react';
 import { CompletedRide } from '../types';
 
 interface RideCompletionModalProps {

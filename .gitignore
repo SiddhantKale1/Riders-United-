@@ -10,3 +10,13 @@ dist/
 *.db-shm
 *.db-wal
 *.apk
+
+# AI agent skills & cache
+.agent/
+__pycache__/
+*.pyc
+
+# IDEs
+.idea/
+.vscode/
+*.sw?

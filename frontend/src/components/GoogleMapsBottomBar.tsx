@@ -6,8 +6,7 @@ import {
   Users,
   Play,
   X,
-  Fuel,
-  Navigation
+  Fuel
 } from 'lucide-react';
 import { voiceComms } from '../services/voiceComms';
 import { nativeMobile } from '../services/nativeMobile';

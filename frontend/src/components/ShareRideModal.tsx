@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Share2, Copy, Check, MessageSquare, QrCode, X } from 'lucide-react';
+import { Share2, Copy, Check, MessageSquare, X } from 'lucide-react';
 
 interface ShareRideModalProps {
   isOpen: boolean;
