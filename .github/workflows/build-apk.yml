@@ -44,7 +44,7 @@ jobs:
 
       - name: Sync Capacitor Android
         working-directory: frontend
-        run: npx cap sync android --verbose
+        run: npx cap sync android
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
